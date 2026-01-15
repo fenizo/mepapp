@@ -14,20 +14,20 @@ jobs:
           username: ${{ secrets.BACKEND_SERVER_USER }}
           password: ${{ secrets.BACKEND_SERVER_PASSWORD }}
           script: |
-            echo "--- Environment Check ---"
-            env
-            echo "--- Path Check ---"
-            echo $PATH
+            echo "--- OS Info ---"
+            cat /etc/os-release
             
-            echo "--- Exhaustive Java Search ---"
-            find / -name java -type f -executable 2>/dev/null | grep bin/java || echo "Java not found in /"
+            echo "--- Package Check (Java/SSL) ---"
+            dpkg -l | grep -E "jdk|jre|clp|nginx" || echo "No relevant packages found"
             
-            echo "--- Attempting to Add SSL via CloudPanel ---"
-            # Using -n for non-interactive sudo if possible
-            sudo -n clpctl site:add:ssl --domain=staging.maduraielectriciansandplumbers.com --force || echo "clpctl failed"
+            echo "--- Attempting SSL with Password Pipe ---"
+            echo "${{ secrets.BACKEND_SERVER_PASSWORD }}" | sudo -S clpctl site:add:ssl --domain=staging.maduraielectriciansandplumbers.com --force || echo "SSL pipe failed"
             
-            echo "--- Process Check ---"
-            ps -ef | grep java | grep -v grep
+            echo "--- Nginx Site Configs ---"
+            ls -la /etc/nginx/sites-enabled/
+            
+            echo "--- Search for Java in /usr/lib/jvm ---"
+            ls -R /usr/lib/jvm 2>/dev/null || echo "JVM dir not found"
             
             echo "--- Port Check ---"
             netstat -tanp | grep 8085 || ss -tulpn | grep 8085 || echo "Port 8085 not listening"
