@@ -13,6 +13,9 @@ class JobController(private val jobService: JobService) {
     @GetMapping("/{id}")
     fun getJob(@PathVariable id: UUID) = jobService.getJob(id)
 
+    @GetMapping("/staff/{staffId}")
+    fun getJobsByStaff(@PathVariable staffId: UUID) = jobService.getJobsByStaff(staffId)
+
     @PostMapping("/{id}/start")
     fun startJob(@PathVariable id: UUID) = jobService.startJob(id)
 

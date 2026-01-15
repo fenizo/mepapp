@@ -14,6 +14,8 @@ class JobService(private val jobRepository: JobRepository) {
 
     fun getJob(id: UUID): Job = jobRepository.findById(id).orElseThrow { Exception("Job not found") }
 
+    fun getJobsByStaff(staffId: UUID): List<Job> = jobRepository.findByStaffId(staffId)
+
     @Transactional
     fun startJob(id: UUID): Job {
         val job = getJob(id)
