@@ -14,22 +14,42 @@ jobs:
           username: ${{ secrets.BACKEND_SERVER_USER }}
           password: ${{ secrets.BACKEND_SERVER_PASSWORD }}
           script: |
-            echo "--- App Log Check ---"
-            cat ~/apps/mep-backend/mep-backend/app.log || echo "app.log not found"
+            echo "--- Cleanup ---"
+            rm -f ~/apps/mep-backend/mep-backend/app.log
             
-            echo "--- Process Check ---"
+            echo "--- Path Setup ---"
+            JAVA_BIN="$HOME/apps/mep-backend/java/jdk-17/bin/java"
+            JAR_DIR="$HOME/apps/mep-backend/mep-backend/target"
+            
+            echo "--- Java Binary Check ---"
+            ls -l "$JAVA_BIN" || echo "Java binary missing"
+            if [ -x "$JAVA_BIN" ]; then
+              echo "Java is executable"
+              "$JAVA_BIN" -version
+            else
+              echo "Error: Java not executable"
+            fi
+            
+            echo "--- JAR Check ---"
+            find "$JAR_DIR" -name "*.jar"
+            
+            echo "--- Attempting Manual Start ---"
+            # Kill existing
+            fuser -k 8085/tcp || true
+            
+            cd "$HOME/apps/mep-backend/mep-backend"
+            JAR_FILE=$(find "$JAR_DIR" -maxdepth 1 -name "*.jar" | head -n 1)
+            
+            if [ -n "$JAR_FILE" ]; then
+               nohup "$JAVA_BIN" -jar "$JAR_FILE" --server.port=8085 > app.log 2>&1 &
+               echo "Started process under nohup"
+               sleep 10
+               echo "--- Post-Start Log Check ---"
+               cat app.log
+            else
+               echo "No JAR found to start"
+            fi
+            
+            echo "--- Final Process Check ---"
             ps -ef | grep java | grep -v grep
-            
-            echo "--- Port Check ---"
-            netstat -tanp | grep 8085 || ss -tulpn | grep 8085 || echo "Port 8085 not listening"
-            
-            echo "--- Port Check ---"
-            netstat -tanp | grep 8085 || ss -tulpn | grep 8085 || echo "Port 8085 not listening"
-            
-            echo "--- Local API Check ---"
-            curl -s http://localhost:8085/api/auth/me || echo "API not responding on localhost"
-            
-            echo "--- Register Test User ---"
-            curl -v -X POST http://localhost:8085/api/auth/register \
-              -H "Content-Type: application/json" \
-              -d '{"name":"Admin User", "phone":"9999999999", "password":"1234", "role":"ADMIN"}'
+            netstat -tulpn | grep 8085 || echo "Port 8085 not listening"
