@@ -46,9 +46,26 @@ jobs:
             $PM2_BIN start "java -jar -Dserver.port=8085 ~/apps/mep-backend/mep-backend/target/backend-0.0.1-SNAPSHOT.jar" --name mep-backend
           else
             echo "PM2 not found. Falling back to nohup."
+            export PATH=$PATH:/home/${{ secrets.BACKEND_SERVER_USER }}/.nvm/versions/node/v22.13.0/bin
+            if [ -f ~/.bashrc ]; then source ~/.bashrc; fi
+            if [ -f ~/.profile ]; then source ~/.profile; fi
+            
             # Kill existing process on port 8085
             fuser -k 8085/tcp || true
-            sleep 2
-            nohup java -jar -Dserver.port=8085 ~/apps/mep-backend/mep-backend/target/backend-0.0.1-SNAPSHOT.jar > ~/apps/mep-backend/backend.log 2>&1 &
-            echo "Backend started with nohup."
+            
+            # Start Java app with robust nohup
+            cd /home/${{ secrets.BACKEND_SERVER_USER }}/mep-backend
+            nohup java -jar target/*.jar > app.log 2>&1 &
+            
+            # Wait for process to initialize
+            echo "Waiting for backend to start..."
+            sleep 10
+            
+            # Verify process is running
+            echo "Checking process status:"
+            ps -ef | grep java
+            
+            # Check log for immediate errors
+            echo "Initial Log Output:"
+            head -n 20 app.log
           fi
