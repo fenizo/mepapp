@@ -55,16 +55,30 @@ jobs:
               rm ~/apps/mep-backend/java/jdk.tar.gz
             fi
             
-            JAVA_BIN=~/apps/mep-backend/java/jdk-17/bin/java
+            JAVA_BIN="$HOME/apps/mep-backend/java/jdk-17/bin/java"
+            JAR_DIR="$HOME/apps/mep-backend/mep-backend/target"
+            JAR_FILE=$(find "$JAR_DIR" -maxdepth 1 -name "*.jar" | head -n 1)
+            
             echo "Using Portable Java at: $JAVA_BIN"
+            if [ ! -x "$JAVA_BIN" ]; then
+              echo "Error: Java binary not executable or found at $JAVA_BIN"
+              exit 1
+            fi
             $JAVA_BIN -version
+            
+            echo "Found JAR file: $JAR_FILE"
+            if [ -z "$JAR_FILE" ]; then
+              echo "Error: No JAR file found in $JAR_DIR"
+              exit 1
+            fi
             
             # Kill existing process on port 8085
             fuser -k 8085/tcp || true
             
-            # Start Java app with robust nohup
-            cd ~/apps/mep-backend/mep-backend
-            nohup $JAVA_BIN -jar target/*.jar --server.port=8085 > app.log 2>&1 &
+            # Start Java app with robust nohup and explicit path
+            cd "$HOME/apps/mep-backend/mep-backend"
+            rm -f app.log
+            nohup "$JAVA_BIN" -jar "$JAR_FILE" --server.port=8085 > app.log 2>&1 &
             
             # Wait for process to initialize
             echo "Waiting for backend to start..."
