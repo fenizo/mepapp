@@ -44,6 +44,12 @@ jobs:
             echo "Using PM2 at: $PM2_BIN"
             $PM2_BIN delete mep-backend || true
             $PM2_BIN start "java -jar -Dserver.port=8085 ~/apps/mep-backend/mep-backend/target/backend-0.0.1-SNAPSHOT.jar" --name mep-backend
+            
+            # Wait for backend to start and register a test user
+            sleep 15
+            curl -X POST http://localhost:8085/api/auth/register \
+              -H "Content-Type: application/json" \
+              -d '{"name": "Field Staff", "phone": "1234567890", "password": "1234", "role": "STAFF"}' || true
           else
             echo "PM2 not found. Falling back to nohup."
             export PATH=$PATH:/home/${{ secrets.BACKEND_SERVER_USER }}/.nvm/versions/node/v22.13.0/bin
@@ -68,4 +74,10 @@ jobs:
             # Check log for immediate errors
             echo "Initial Log Output:"
             head -n 20 app.log
+
+            # Wait a few more seconds and register a test user for the mobile app
+            sleep 5
+            curl -X POST http://localhost:8085/api/auth/register \
+              -H "Content-Type: application/json" \
+              -d '{"name": "Field Staff", "phone": "1234567890", "password": "1234", "role": "STAFF"}' || true
           fi
