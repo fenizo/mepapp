@@ -26,6 +26,8 @@ export default function Dashboard() {
     const [jobs, setJobs] = useState<Job[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const [callLogs, setCallLogs] = useState<any[]>([]);
+
     useEffect(() => {
         fetch('/api/jobs')
             .then(res => res.json())
@@ -37,6 +39,11 @@ export default function Dashboard() {
                 console.error("Failed to fetch jobs:", err);
                 setLoading(false);
             });
+
+        fetch('/api/call-logs/job/00000000-0000-0000-0000-000000000000') // Placeholder for now
+            .then(res => res.json())
+            .then(data => setCallLogs(data))
+            .catch(() => { });
     }, []);
 
     const totalCalls = jobs.length;
@@ -51,10 +58,10 @@ export default function Dashboard() {
         }, 0);
 
     const metrics = [
-        { label: 'Total Calls Today', value: totalCalls.toString(), color: 'var(--primary)' }, // Showing total for now
+        { label: 'Total Jobs', value: totalCalls.toString(), color: 'var(--primary)' },
         { label: 'Completed Jobs', value: completedJobs.toString(), color: 'var(--success)' },
         { label: 'Pending Jobs', value: pendingJobs.toString(), color: 'var(--warning)' },
-        { label: 'Revenue Today', value: `₹${revenue.toLocaleString()}`, color: 'var(--accent)' },
+        { label: 'Synced Logs', value: callLogs.length.toString(), color: 'var(--accent)' },
     ];
 
     return (

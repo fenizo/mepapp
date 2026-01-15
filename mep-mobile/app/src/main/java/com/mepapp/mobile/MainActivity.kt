@@ -7,12 +7,18 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.work.*
 import com.mepapp.mobile.ui.theme.MEPAppTheme
 import com.mepapp.mobile.ui.MainNavigation
+import com.mepapp.mobile.worker.CallLogWorker
+import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        setupCallLogSync()
+
         setContent {
             MEPAppTheme {
                 Surface(
@@ -23,5 +29,21 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun setupCallLogSync() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val syncRequest = PeriodicWorkRequestBuilder<CallLogWorker>(15, TimeUnit.MINUTES)
+            .setConstraints(constraints)
+            .build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "CallLogSync",
+            ExistingPeriodicWorkPolicy.KEEP,
+            syncRequest
+        )
     }
 }

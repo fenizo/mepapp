@@ -8,4 +8,5 @@ import java.util.*
 @Repository
 interface CallLogRepository : JpaRepository<CallLog, UUID> {
     fun findByJobIdOrderByTimestampDesc(jobId: UUID): List<CallLog>
+    fun findAllByOrderByTimestampDesc(): List<CallLog>
 }

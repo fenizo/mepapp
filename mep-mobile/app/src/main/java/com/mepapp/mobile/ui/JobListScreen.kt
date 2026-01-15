@@ -6,25 +6,28 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-data class MobileJob(val id: String, val customer: String, val service: String, val status: String)
+import com.mepapp.mobile.network.JobResponse
+import com.mepapp.mobile.network.MepApiService
+import com.mepapp.mobile.network.NetworkModule
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JobListScreen(onJobClick: (String) -> Unit) {
-    var jobs by remember { mutableStateOf<List<com.mepapp.mobile.network.JobResponse>>(emptyList()) }
+    var jobs by remember { mutableStateOf<List<JobResponse>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     
     val scope = rememberCoroutineScope()
-    val apiService = remember { com.mepapp.mobile.network.NetworkModule.createService<com.mepapp.mobile.network.MepApiService>() }
+    // Explicitly typed to ensure compiler finds it
+    val apiService = remember { NetworkModule.createService<MepApiService>() }
 
     LaunchedEffect(Unit) {
         try {

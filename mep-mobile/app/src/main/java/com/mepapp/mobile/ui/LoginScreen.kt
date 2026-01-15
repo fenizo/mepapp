@@ -8,13 +8,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import com.mepapp.mobile.data.AuthRepository
 import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(authRepository: AuthRepository, onLoginSuccess: () -> Unit) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var pin by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -24,23 +26,28 @@ fun LoginScreen(authRepository: AuthRepository, onLoginSuccess: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("MEP App Login", fontSize = 24.sp, style = MaterialTheme.typography.headlineMedium)
+        Text("MEP Field Service", fontSize = 28.sp, style = MaterialTheme.typography.headlineLarge)
+        Text("Enter your credentials to continue", fontSize = 16.sp, color = MaterialTheme.colorScheme.secondary)
         Spacer(Modifier.height(32.dp))
 
         OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth()
+            value = phone,
+            onValueChange = { if (it.length <= 10) phone = it },
+            label = { Text("Phone Number") },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            singleLine = true
         )
         Spacer(Modifier.height(16.dp))
 
         OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Password") },
+            value = pin,
+            onValueChange = { if (it.length <= 4) pin = it },
+            label = { Text("4-Digit PIN") },
             visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            singleLine = true
         )
 
         if (errorMessage != null) {
@@ -53,17 +60,17 @@ fun LoginScreen(authRepository: AuthRepository, onLoginSuccess: () -> Unit) {
             onClick = {
                 isLoading = true
                 scope.launch {
-                    val success = authRepository.login(email, password)
+                    val success = authRepository.login(phone, pin)
                     isLoading = false
                     if (success) {
                         onLoginSuccess()
                     } else {
-                        errorMessage = "Login failed. Check your credentials."
+                        errorMessage = "Login failed. Check your phone and PIN."
                     }
                 }
             },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading && email.isNotBlank() && password.isNotBlank()
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            enabled = !isLoading && phone.length >= 10 && pin.length == 4
         ) {
             if (isLoading) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)

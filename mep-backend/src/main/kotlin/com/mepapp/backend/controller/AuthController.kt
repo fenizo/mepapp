@@ -33,6 +33,13 @@ class AuthController(
         return LoginResponse(token, user.role, user.name)
     }
 
+    @GetMapping("/me")
+    fun getMe(): User? {
+        val authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().authentication
+        val phone = authentication.name
+        return userRepository.findByPhone(phone)
+    }
+
     @PostMapping("/register")
     fun register(@RequestBody request: RegisterRequest): String {
         val user = User(

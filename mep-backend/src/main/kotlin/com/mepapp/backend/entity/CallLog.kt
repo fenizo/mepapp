@@ -12,12 +12,21 @@ data class CallLog(
     val id: UUID? = null,
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "job_id", nullable = false)
-    val job: Job,
+    @JoinColumn(name = "job_id", nullable = true)
+    val job: Job? = null,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "staff_id", nullable = false)
     val staff: User,
+
+    @Column(nullable = false)
+    val phoneNumber: String,
+
+    @Column(nullable = false)
+    val duration: Long, // in seconds
+
+    @Column(nullable = false)
+    val callType: String, // INCOMING, OUTGOING, MISSED
 
     @Column(nullable = false)
     val timestamp: LocalDateTime = LocalDateTime.now()

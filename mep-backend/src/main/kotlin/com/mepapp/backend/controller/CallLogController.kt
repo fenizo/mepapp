@@ -16,12 +16,27 @@ class CallLogController(
 ) {
     @PostMapping
     fun logCall(@RequestBody request: CallLogRequest): CallLog {
-        val job = jobRepository.findById(request.jobId).orElseThrow { Exception("Job not found") }
         val staff = userRepository.findById(request.staffId).orElseThrow { Exception("Staff not found") }
+        val job = request.jobId?.let { jobRepository.findById(it).orElse(null) }
         
-        val callLog = CallLog(job = job, staff = staff)
+        val callLog = CallLog(
+            job = job,
+            staff = staff,
+            phoneNumber = request.phoneNumber,
+            duration = request.duration,
+            callType = request.callType,
+            timestamp = request.timestamp ?: LocalDateTime.now()
+        )
         return callLogRepository.save(callLog)
     }
+
+    @PostMapping("/batch")
+    fun logCalls(@RequestBody requests: List<CallLogRequest>): List<CallLog> {
+        return requests.map { logCall(it) }
+    }
+
+    @GetMapping
+    fun getAllLogs(): List<CallLog> = callLogRepository.findAllByOrderByTimestampDesc()
 
     @GetMapping("/job/{jobId}")
     fun getLogsByJob(@PathVariable jobId: UUID): List<CallLog> =
@@ -29,6 +44,10 @@ class CallLogController(
 }
 
 data class CallLogRequest(
-    val jobId: UUID,
-    val staffId: UUID
+    val jobId: UUID?,
+    val staffId: UUID,
+    val phoneNumber: String,
+    val duration: Long,
+    val callType: String,
+    val timestamp: LocalDateTime? = null
 )
