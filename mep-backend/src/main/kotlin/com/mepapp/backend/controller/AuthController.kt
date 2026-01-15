@@ -30,7 +30,7 @@ class AuthController(
         )
         val user = userRepository.findByPhone(request.phone)!!
         val token = jwtUtils.generateToken(user.phone)
-        return LoginResponse(token, user.role, user.name, user.id)
+        return LoginResponse(token, user.role, user.name, user.id!!)
     }
 
     @GetMapping("/me")
