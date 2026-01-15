@@ -1,0 +1,39 @@
+name: Deploy Web Admin
+on:
+  push:
+    branches: [ main ]
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: mep-web/package-lock.json
+    - name: Build Next.js
+      run: |
+        cd mep-web
+        npm install
+        npm run build
+    - name: Deploy to Server
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        source: "mep-web/.next,mep-web/public,mep-web/package.json,mep-web/next.config.js"
+        target: "~/apps/mep-web"
+    - name: Restart Web App
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        script: |
+          cd ~/apps/mep-web/mep-web
+          npm install --production
+          pm2 delete mep-web || true
+          pm2 start npm --name "mep-web" -- start

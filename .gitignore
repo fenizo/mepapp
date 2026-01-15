@@ -1,0 +1,21 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Build
+build/
+target/
+out/
+.gradle/
+node_modules/
+.next/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+*.local
+application-local.properties
