@@ -18,5 +18,5 @@ jobs:
             ps -ef | grep java
             echo "=== PORTS ==="
             netstat -tulpn | grep 8085 || echo "Port 8085 not listening"
-            echo "=== LOGS (nohup.out) ==="
-            tail -n 100 nohup.out || echo "nohup.out not found"
+            echo "=== LOGS (app.log) ==="
+            tail -n 100 app.log || echo "app.log not found"
