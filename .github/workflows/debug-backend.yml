@@ -14,5 +14,11 @@ jobs:
           username: ${{ secrets.BACKEND_SERVER_USER }}
           password: ${{ secrets.BACKEND_SERVER_PASSWORD }}
           script: |
-            echo "--- Java Directory Structure ---"
-            ls -R ~/apps/mep-backend/java
+            echo "--- App Log Content ---"
+            cat ~/apps/mep-backend/mep-backend/app.log || echo "app.log not found"
+            
+            echo "--- Process Check ---"
+            ps -ef | grep java | grep -v grep
+            
+            echo "--- Port Check ---"
+            netstat -tulpn | grep 8085 || echo "Port 8085 not listening"
