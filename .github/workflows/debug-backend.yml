@@ -11,20 +11,23 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.BACKEND_SERVER_USER }}
-          password: ${{ secrets.BACKEND_SERVER_PASSWORD }}
+          username: ${{ secrets.WEB_SERVER_USER }}
+          password: ${{ secrets.WEB_SERVER_PASSWORD }}
           script: |
             echo "--- Sudo Test ---"
-            echo "${{ secrets.BACKEND_SERVER_PASSWORD }}" | sudo -S whoami
+            echo "${{ secrets.WEB_SERVER_PASSWORD }}" | sudo -S whoami
             
             echo "--- Site List ---"
-            echo "${{ secrets.BACKEND_SERVER_PASSWORD }}" | sudo -S clpctl site:list || echo "site:list failed"
+            echo "${{ secrets.WEB_SERVER_PASSWORD }}" | sudo -S clpctl site:list || echo "site:list failed"
             
             echo "--- JAR Search ---"
             find /home -name "*.jar" 2>/dev/null || echo "No jars found in /home"
             
             echo "--- Attempting SSL again ---"
-            echo "${{ secrets.BACKEND_SERVER_PASSWORD }}" | sudo -S clpctl site:add:ssl --domain=staging.maduraielectriciansandplumbers.com --force || echo "SSL failed"
+            echo "${{ secrets.WEB_SERVER_PASSWORD }}" | sudo -S clpctl site:add:ssl --domain=staging.maduraielectriciansandplumbers.com --force || echo "SSL failed"
+            
+            echo "--- Process Check ---"
+            ps -ef | grep -E "java|node|php|nginx" | grep -v grep
             
             echo "--- Port Check ---"
             netstat -tanp | grep 8085 || ss -tulpn | grep 8085 || echo "Port 8085 not listening"
