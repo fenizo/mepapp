@@ -1,19 +1,23 @@
-name: Create Admin User
+name: Server Maintenance & SSL
 
 on:
   workflow_dispatch:
 
 jobs:
-  create-user:
+  maintenance:
     runs-on: ubuntu-latest
     steps:
-      - name: Create Admin User via SSH
+      - name: Run SSL and Diagnostics via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.BACKEND_SERVER_USER }}
           password: ${{ secrets.BACKEND_SERVER_PASSWORD }}
           script: |
+            echo "--- Attempting to Add SSL via CloudPanel ---"
+            # Attempt to generate SSL. Using --force to ensure it tries even if it thinks it exists.
+            sudo clpctl site:add:ssl --domain=staging.maduraielectriciansandplumbers.com --force || echo "clpctl not found or failed"
+            
             echo "--- Process Check ---"
             ps -ef | grep java | grep -v grep
             
