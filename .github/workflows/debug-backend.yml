@@ -14,9 +14,17 @@ jobs:
           username: ${{ secrets.BACKEND_SERVER_USER }}
           password: ${{ secrets.BACKEND_SERVER_PASSWORD }}
           script: |
+            echo "--- Environment Check ---"
+            env
+            echo "--- Path Check ---"
+            echo $PATH
+            
+            echo "--- Exhaustive Java Search ---"
+            find / -name java -type f -executable 2>/dev/null | grep bin/java || echo "Java not found in /"
+            
             echo "--- Attempting to Add SSL via CloudPanel ---"
-            # Attempt to generate SSL. Using --force to ensure it tries even if it thinks it exists.
-            sudo clpctl site:add:ssl --domain=staging.maduraielectriciansandplumbers.com --force || echo "clpctl not found or failed"
+            # Using -n for non-interactive sudo if possible
+            sudo -n clpctl site:add:ssl --domain=staging.maduraielectriciansandplumbers.com --force || echo "clpctl failed"
             
             echo "--- Process Check ---"
             ps -ef | grep java | grep -v grep
