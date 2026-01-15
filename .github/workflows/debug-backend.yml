@@ -14,6 +14,9 @@ jobs:
           username: ${{ secrets.BACKEND_SERVER_USER }}
           password: ${{ secrets.BACKEND_SERVER_PASSWORD }}
           script: |
-            curl -X POST http://localhost:8085/api/auth/register \
-              -H "Content-Type: application/json" \
-              -d '{"name":"Admin User", "phone":"9876543210", "password":"admin123", "role":"ADMIN"}'
+            echo "=== PROCESSES ==="
+            ps -ef | grep java
+            echo "=== PORTS ==="
+            netstat -tulpn | grep 8085 || echo "Port 8085 not listening"
+            echo "=== LOGS (nohup.out) ==="
+            tail -n 100 nohup.out || echo "nohup.out not found"
