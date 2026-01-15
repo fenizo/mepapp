@@ -54,18 +54,22 @@ jobs:
             fuser -k 8085/tcp || true
             
             # Start Java app with robust nohup
-            cd /home/${{ secrets.BACKEND_SERVER_USER }}/mep-backend
-            nohup java -jar target/*.jar > app.log 2>&1 &
+            cd ~/apps/mep-backend/mep-backend
+            nohup java -jar target/*.jar --server.port=8085 > app.log 2>&1 &
             
             # Wait for process to initialize
             echo "Waiting for backend to start..."
-            sleep 10
+            sleep 15
             
             # Verify process is running
             echo "Checking process status:"
-            ps -ef | grep java
+            ps -ef | grep java | grep -v grep
             
             # Check log for immediate errors
             echo "Initial Log Output:"
-            head -n 20 app.log
+            [ -f app.log ] && head -n 50 app.log || echo "app.log not found"
+            
+            # Check if port is listening
+            echo "Port Check:"
+            netstat -tulpn | grep 8085 || echo "Port 8085 NOT listening"
           fi
