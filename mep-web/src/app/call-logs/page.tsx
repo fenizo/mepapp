@@ -196,48 +196,50 @@ const CallLogsPage = () => {
             </div>
 
             <div className="glass-card" style={{ overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                    <thead>
-                        <tr style={{ background: 'rgba(255, 255, 255, 0.02)', borderBottom: '1px solid var(--card-border)' }}>
-                            <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Staff</th>
-                            <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Contact Name</th>
-                            <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Phone Number</th>
-                            <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Type</th>
-                            <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Last Duration (s)</th>
-                            <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Last Call Time</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading && displayLogs.length === 0 ? (
-                            <tr><td colSpan={5} style={{ padding: '48px', textAlign: 'center', color: '#475569' }}>Fetching call history...</td></tr>
-                        ) : displayLogs.length === 0 ? (
-                            <tr><td colSpan={5} style={{ padding: '48px', textAlign: 'center', color: '#475569' }}>No call logs found for this filter.</td></tr>
-                        ) : (
-                            displayLogs.map((log) => (
-                                <tr key={log.id} style={{ borderBottom: '1px solid var(--card-border)', transition: 'background 0.2s' }}>
-                                    <td style={{ padding: '16px 24px', fontWeight: 500 }}>{log.staff?.name || 'Admin'}</td>
-                                    <td style={{ padding: '16px 24px', fontWeight: 500, color: '#f8fafc' }}>{log.contactName || '-'}</td>
-                                    <td style={{ padding: '16px 24px', color: '#38bdf8' }}>{log.phoneNumber}</td>
-                                    <td style={{ padding: '16px 24px' }}>
-                                        <span style={{
-                                            padding: '4px 8px',
-                                            borderRadius: '4px',
-                                            fontSize: '0.7rem',
-                                            background: log.callType === 'OUTGOING' ? 'rgba(56, 189, 248, 0.1)' : 'rgba(34, 197, 94, 0.1)',
-                                            color: log.callType === 'OUTGOING' ? '#38bdf8' : '#22c55e'
-                                        }}>
-                                            {log.callType}
-                                        </span>
-                                    </td>
-                                    <td style={{ padding: '16px 24px', color: '#94a3b8' }}>{log.duration}</td>
-                                    <td style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem' }}>
-                                        {new Date(log.timestamp).toLocaleString()}
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                <div className="table-container">
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <thead>
+                            <tr style={{ background: 'rgba(255, 255, 255, 0.02)', borderBottom: '1px solid var(--card-border)' }}>
+                                <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Staff</th>
+                                <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Contact Name</th>
+                                <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Phone Number</th>
+                                <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Type</th>
+                                <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Last Duration (s)</th>
+                                <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Last Call Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {loading && displayLogs.length === 0 ? (
+                                <tr><td colSpan={6} style={{ padding: '48px', textAlign: 'center', color: '#475569' }}>Fetching call history...</td></tr>
+                            ) : displayLogs.length === 0 ? (
+                                <tr><td colSpan={6} style={{ padding: '48px', textAlign: 'center', color: '#475569' }}>No call logs found for this filter.</td></tr>
+                            ) : (
+                                displayLogs.map((log) => (
+                                    <tr key={log.id} style={{ borderBottom: '1px solid var(--card-border)', transition: 'background 0.2s' }}>
+                                        <td style={{ padding: '16px 24px', fontWeight: 500 }}>{log.staff?.name || 'Admin'}</td>
+                                        <td style={{ padding: '16px 24px', fontWeight: 500, color: '#f8fafc' }}>{log.contactName || '-'}</td>
+                                        <td style={{ padding: '16px 24px', color: '#38bdf8' }}>{log.phoneNumber}</td>
+                                        <td style={{ padding: '16px 24px' }}>
+                                            <span style={{
+                                                padding: '4px 8px',
+                                                borderRadius: '4px',
+                                                fontSize: '0.7rem',
+                                                background: log.callType === 'OUTGOING' ? 'rgba(56, 189, 248, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+                                                color: log.callType === 'OUTGOING' ? '#38bdf8' : '#22c55e'
+                                            }}>
+                                                {log.callType}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '16px 24px', color: '#94a3b8' }}>{log.duration}</td>
+                                        <td style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem' }}>
+                                            {new Date(log.timestamp).toLocaleString()}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );

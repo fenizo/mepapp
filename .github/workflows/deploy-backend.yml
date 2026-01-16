@@ -23,7 +23,9 @@ jobs:
         username: ${{ secrets.BACKEND_SERVER_USER }}
         password: ${{ secrets.BACKEND_SERVER_PASSWORD }}
         source: "mep-backend/target/*.jar"
-        target: "~/apps/mep-backend"
+        target: "~/apps/mep-backend/staging"
+        strip_components: 2
+
     - name: Restart Backend Service
       uses: appleboy/ssh-action@master
       with:
@@ -31,42 +33,39 @@ jobs:
         username: ${{ secrets.BACKEND_SERVER_USER }}
         password: ${{ secrets.BACKEND_SERVER_PASSWORD }}
         script: |
-          # Ensure target directory exists
-          mkdir -p ~/apps/mep-backend/java
+          # 1. Setup Directories
+          APP_HOME="$HOME/apps/mep-backend"
+          mkdir -p $APP_HOME/java
+          mkdir -p $APP_HOME/staging
           
-          # Download and extract Portable Java 17 if not present
-          if [ ! -f ~/apps/mep-backend/java/jdk-17/bin/java ]; then
+          # 2. Setup Java (Portable)
+          if [ ! -f $APP_HOME/java/jdk-17/bin/java ]; then
             echo "Downloading Portable OpenJDK 17..."
-            curl -L https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.13%2B11/OpenJDK17U-jdk_x64_linux_hotspot_17.0.13_11.tar.gz -o ~/apps/mep-backend/java/jdk.tar.gz
-            tar -xzf ~/apps/mep-backend/java/jdk.tar.gz -C ~/apps/mep-backend/java/
-            mv ~/apps/mep-backend/java/jdk-17* ~/apps/mep-backend/java/jdk-17
-            rm ~/apps/mep-backend/java/jdk.tar.gz
+            curl -L https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.13%2B11/OpenJDK17U-jdk_x64_linux_hotspot_17.0.13_11.tar.gz -o $APP_HOME/java/jdk.tar.gz
+            tar -xzf $APP_HOME/java/jdk.tar.gz -C $APP_HOME/java/
+            mv $APP_HOME/java/jdk-17* $APP_HOME/java/jdk-17
+            rm $APP_HOME/java/jdk.tar.gz
           fi
+          JAVA_BIN="$APP_HOME/java/jdk-17/bin/java"
           
-          JAVA_BIN="$HOME/apps/mep-backend/java/jdk-17/bin/java"
-          JAR_DIR="$HOME/apps/mep-backend/mep-backend/target"
-          JAR_FILE=$(find "$JAR_DIR" -maxdepth 1 -name "*.jar" | head -n 1)
+          # 3. Update JAR
+          # Move the staged jar to the final location as server.jar
+          # We use a wildcard in staging because the source name has versions
+          mv $APP_HOME/staging/*.jar $APP_HOME/server.jar
           
-          echo "Using Portable Java at: $JAVA_BIN"
-          if [ ! -x "$JAVA_BIN" ]; then
-            echo "Error: Java binary not executable or found at $JAVA_BIN"
+          if [ ! -f "$APP_HOME/server.jar" ]; then
+            echo "Error: server.jar not found at $APP_HOME/server.jar"
             exit 1
           fi
-          $JAVA_BIN -version
-          
-          echo "Found JAR file: $JAR_FILE"
-          if [ -z "$JAR_FILE" ]; then
-            echo "Error: No JAR file found in $JAR_DIR"
-            exit 1
-          fi
-          
-          # Kill existing process on port 8085
+
+          # 4. Stop Existing Process
           fuser -k 8085/tcp || true
           
-          # Start Java app with robust nohup and explicit path
-          cd "$HOME/apps/mep-backend/mep-backend"
+          # 5. Start New Process
+          cd "$APP_HOME"
           rm -f app.log
-          nohup "$JAVA_BIN" -jar "$JAR_FILE" --server.port=8085 > app.log 2>&1 &
+          echo "Starting new backend..."
+          nohup "$JAVA_BIN" -jar server.jar --server.port=8085 > app.log 2>&1 &
           
           # Wait for process to initialize
           echo "Waiting for backend to start..."

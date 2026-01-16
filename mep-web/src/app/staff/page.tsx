@@ -81,49 +81,51 @@ export default function StaffPage() {
             </header>
 
             <div className="glass-card" style={{ overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                    <thead>
-                        <tr style={{ background: 'rgba(255, 255, 255, 0.02)', borderBottom: '1px solid var(--card-border)' }}>
-                            <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Name</th>
-                            <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Phone</th>
-                            <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Role</th>
-                            <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500, textAlign: 'right' }}>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading ? (
-                            <tr><td colSpan={4} style={{ padding: '48px', textAlign: 'center', color: '#475569' }}>Loading staff list...</td></tr>
-                        ) : staff.length === 0 ? (
-                            <tr><td colSpan={4} style={{ padding: '48px', textAlign: 'center', color: '#475569' }}>No staff members found.</td></tr>
-                        ) : (
-                            staff.map((s) => (
-                                <tr key={s.id} style={{ borderBottom: '1px solid var(--card-border)' }}>
-                                    <td style={{ padding: '16px 24px', fontWeight: 500 }}>{s.name}</td>
-                                    <td style={{ padding: '16px 24px', color: '#38bdf8' }}>{s.phone}</td>
-                                    <td style={{ padding: '16px 24px' }}>
-                                        <span style={{
-                                            padding: '4px 8px',
-                                            borderRadius: '4px',
-                                            fontSize: '0.7rem',
-                                            background: 'rgba(56, 189, 248, 0.1)',
-                                            color: '#38bdf8'
-                                        }}>
-                                            {s.role}
-                                        </span>
-                                    </td>
-                                    <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                                        <button
-                                            onClick={() => handleDelete(s.id)}
-                                            style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
-                                        >
-                                            Remove
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                <div className="table-container" style={{ marginTop: 0, border: 'none', borderRadius: 0 }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <thead>
+                            <tr style={{ background: 'rgba(255, 255, 255, 0.02)', borderBottom: '1px solid var(--card-border)' }}>
+                                <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Name</th>
+                                <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Phone</th>
+                                <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Role</th>
+                                <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500, textAlign: 'right' }}>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {loading ? (
+                                <tr><td colSpan={4} style={{ padding: '48px', textAlign: 'center', color: '#475569' }}>Loading staff list...</td></tr>
+                            ) : staff.length === 0 ? (
+                                <tr><td colSpan={4} style={{ padding: '48px', textAlign: 'center', color: '#475569' }}>No staff members found.</td></tr>
+                            ) : (
+                                staff.map((s) => (
+                                    <tr key={s.id} style={{ borderBottom: '1px solid var(--card-border)' }}>
+                                        <td style={{ padding: '16px 24px', fontWeight: 500 }}>{s.name}</td>
+                                        <td style={{ padding: '16px 24px', color: '#38bdf8' }}>{s.phone}</td>
+                                        <td style={{ padding: '16px 24px' }}>
+                                            <span style={{
+                                                padding: '4px 8px',
+                                                borderRadius: '4px',
+                                                fontSize: '0.7rem',
+                                                background: 'rgba(56, 189, 248, 0.1)',
+                                                color: '#38bdf8'
+                                            }}>
+                                                {s.role}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                                            <button
+                                                onClick={() => handleDelete(s.id)}
+                                                style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
+                                            >
+                                                Remove
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {showModal && (

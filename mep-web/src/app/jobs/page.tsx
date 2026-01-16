@@ -40,26 +40,26 @@ export default function JobsPage() {
                         <div className="glass-card" style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>No jobs found.</div>
                     ) : (
                         jobs.map((job) => (
-                            <div key={job.id} className="glass-card" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div style={{ display: 'flex', gap: '24px' }}>
-                                    <div>
+                            <div key={job.id} className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+                                    <div style={{ minWidth: '120px' }}>
                                         <div style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Customer</div>
                                         <div style={{ fontWeight: 600 }}>{job.customer?.name || 'Unknown'}</div>
                                     </div>
-                                    <div>
+                                    <div style={{ minWidth: '120px' }}>
                                         <div style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Type</div>
                                         <div style={{ fontWeight: 600 }}>{job.serviceType}</div>
                                     </div>
-                                    <div>
+                                    <div style={{ minWidth: '120px' }}>
                                         <div style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Staff</div>
                                         <div style={{ fontWeight: 600 }}>{job.staff?.name || 'Unassigned'}</div>
                                     </div>
-                                    <div>
+                                    <div style={{ minWidth: '120px' }}>
                                         <div style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Created</div>
                                         <div style={{ fontWeight: 600 }}>{new Date(job.createdAt).toLocaleDateString()}</div>
                                     </div>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--card-border)', paddingTop: '16px' }}>
                                     <span style={{
                                         padding: '4px 10px',
                                         borderRadius: '20px',

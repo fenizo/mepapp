@@ -91,7 +91,7 @@ export default function Dashboard() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                     <h3 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Recent Active Jobs</h3>
                 </div>
-                <div style={{ overflowX: 'auto' }}>
+                <div className="table-container" style={{ marginTop: 0, border: 'none', borderRadius: 0 }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
                             <tr style={{ borderBottom: '1px solid var(--card-border)' }}>
