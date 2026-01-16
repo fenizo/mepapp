@@ -1,5 +1,7 @@
+"use client";
+
 import React, { useEffect, useState } from 'react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch } from '../lib/api';
 
 interface JobItem {
     description: string;
@@ -57,84 +59,77 @@ export default function Dashboard() {
 
     const revenue = jobs
         .filter(j => j.status === 'COMPLETED') // Assuming revenue is only realized on completion
-        .reduce((sum, job) => {
-            const jobTotal = job.items.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0);
-            return sum + jobTotal;
-        }, 0);
-
-    const metrics = [
-        { label: 'Total Jobs', value: totalCalls.toString(), color: 'var(--primary)' },
-        { label: 'Completed Jobs', value: completedJobs.toString(), color: 'var(--success)' },
-        { label: 'Pending Jobs', value: pendingJobs.toString(), color: 'var(--warning)' },
-        { label: 'Synced Logs', value: callLogs.length.toString(), color: 'var(--accent)' },
-    ];
+        .reduce((sum, job) => sum + (job.items?.reduce((itemSum: number, item: any) => itemSum + (item.price * item.quantity), 0) || 0), 0);
 
     return (
         <div>
             <header style={{ marginBottom: '32px' }}>
-                <h2 style={{ fontSize: '2rem', fontWeight: 700 }}>Admin Dashboard</h2>
+                <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '4px' }}>Admin Dashboard</h2>
                 <p style={{ color: '#94a3b8' }}>Welcome back, here is what is happening today.</p>
             </header>
 
-            <div className="metric-grid">
-                {metrics.map((m) => (
-                    <div key={m.label} className="glass-card metric-card">
-                        <span className="metric-label">{m.label}</span>
-                        <span className="metric-value" style={{ color: m.color }}>{m.value}</span>
-                    </div>
-                ))}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', marginBottom: '32px' }}>
+                <div className="glass-card" style={{ padding: '24px' }}>
+                    <div style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '8px' }}>Total Jobs</div>
+                    <div style={{ fontSize: '1.875rem', fontWeight: 700, color: 'var(--primary)' }}>{totalCalls}</div>
+                </div>
+                <div className="glass-card" style={{ padding: '24px' }}>
+                    <div style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '8px' }}>Completed Jobs</div>
+                    <div style={{ fontSize: '1.875rem', fontWeight: 700, color: '#22c55e' }}>{completedJobs}</div>
+                </div>
+                <div className="glass-card" style={{ padding: '24px' }}>
+                    <div style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '8px' }}>Pending Jobs</div>
+                    <div style={{ fontSize: '1.875rem', fontWeight: 700, color: 'var(--warning)' }}>{pendingJobs}</div>
+                </div>
+                <div className="glass-card" style={{ padding: '24px' }}>
+                    <div style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '8px' }}>Synced Logs</div>
+                    <div style={{ fontSize: '1.875rem', fontWeight: 700, color: '#38bdf8' }}>{callLogs.length}</div>
+                </div>
             </div>
 
-            <section className="glass-card" style={{ padding: '24px' }}>
-                <h3 style={{ marginBottom: '20px', fontSize: '1.25rem' }}>Recent Active Jobs</h3>
-                {loading ? (
-                    <p>Loading jobs...</p>
-                ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className="glass-card" style={{ padding: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Recent Active Jobs</h3>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
-                            <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--card-border)', color: '#94a3b8' }}>
-                                <th style={{ padding: '12px' }}>Customer</th>
-                                <th style={{ padding: '12px' }}>Service</th>
-                                <th style={{ padding: '12px' }}>Staff</th>
-                                <th style={{ padding: '12px' }}>Status</th>
-                                <th style={{ padding: '12px' }}>Action</th>
+                            <tr style={{ borderBottom: '1px solid var(--card-border)' }}>
+                                <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Customer</th>
+                                <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Service</th>
+                                <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Staff</th>
+                                <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Status</th>
+                                <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {jobs.slice(0, 10).map((job) => (
-                                <tr key={job.id} style={{ borderBottom: '1px solid var(--card-border)' }}>
-                                    <td style={{ padding: '12px' }}>{job.customer?.name || "Unknown"}</td>
-                                    <td style={{ padding: '12px' }}>{job.serviceType}</td>
-                                    <td style={{ padding: '12px' }}>{job.staff?.username || "Unassigned"}</td>
-                                    <td style={{ padding: '12px' }}>
-                                        <span style={{
-                                            padding: '4px 10px',
-                                            borderRadius: '20px',
-                                            fontSize: '0.75rem',
-                                            background: job.status === 'IN_PROGRESS' ? 'rgba(56, 189, 248, 0.1)' :
-                                                job.status === 'COMPLETED' ? 'rgba(34, 197, 94, 0.1)' :
-                                                    'rgba(245, 158, 11, 0.1)',
-                                            color: job.status === 'IN_PROGRESS' ? 'var(--primary)' :
-                                                job.status === 'COMPLETED' ? 'var(--success)' :
-                                                    'var(--warning)'
-                                        }}>
-                                            {job.status}
-                                        </span>
-                                    </td>
-                                    <td style={{ padding: '12px' }}>
-                                        <button className="btn-primary" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>View</button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {jobs.length === 0 && (
-                                <tr>
-                                    <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: '#94a3b8' }}>No active jobs found.</td>
-                                </tr>
+                            {jobs.length === 0 ? (
+                                <tr><td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: '#475569' }}>No active jobs found.</td></tr>
+                            ) : (
+                                jobs.map((job) => (
+                                    <tr key={job.id} style={{ borderBottom: '1px solid var(--card-border)' }}>
+                                        <td style={{ padding: '16px', fontWeight: 500 }}>{job.customer?.name || 'Unknown'}</td>
+                                        <td style={{ padding: '16px' }}>{job.serviceType}</td>
+                                        <td style={{ padding: '16px', color: '#94a3b8' }}>{job.staff?.username || 'Unassigned'}</td>
+                                        <td style={{ padding: '16px' }}>
+                                            <span style={{
+                                                padding: '4px 10px',
+                                                borderRadius: '20px',
+                                                fontSize: '0.75rem',
+                                                background: job.status === 'COMPLETED' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(56, 189, 248, 0.1)',
+                                                color: job.status === 'COMPLETED' ? '#22c55e' : 'var(--primary)'
+                                            }}>
+                                                {job.status}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '16px' }}><button className="btn-primary" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>View</button></td>
+                                    </tr>
+                                ))
                             )}
                         </tbody>
                     </table>
-                )}
-            </section>
+                </div>
+            </div>
         </div>
     );
 }

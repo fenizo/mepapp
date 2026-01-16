@@ -1,17 +1,15 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch } from '../../lib/api';
 
 interface CallLog {
     id: string;
+    staffName: string;
     phoneNumber: string;
-    duration: number;
     callType: string;
+    duration: string;
     timestamp: string;
-    staff: {
-        name: string;
-    };
 }
 
 const CallLogsPage = () => {
@@ -41,77 +39,64 @@ const CallLogsPage = () => {
     }, []);
 
     return (
-        <div>
-            <header style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="animate-enter">
+            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                 <div>
-                    <h2 style={{ fontSize: '2rem', fontWeight: 700 }}>Call Logs</h2>
+                    <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '4px' }}>Call Logs</h2>
                     <p style={{ color: '#94a3b8' }}>Monitor all field staff communication.</p>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                    <button
-                        onClick={fetchLogs}
-                        style={{
-                            background: 'var(--primary)',
-                            color: 'white',
-                            border: 'none',
-                            padding: '10px 20px',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            fontWeight: 600
-                        }}
-                    >
-                        Refresh Logs
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                    {lastUpdated && <span style={{ fontSize: '0.8rem', color: '#475569' }}>Last updated: {lastUpdated.toLocaleTimeString()}</span>}
+                    <button onClick={fetchLogs} disabled={loading} className="btn-primary">
+                        {loading ? 'Updating...' : 'Refresh Logs'}
                     </button>
-                    {lastUpdated && (
-                        <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '8px' }}>
-                            Last Updated: {lastUpdated.toLocaleTimeString()}
-                        </p>
-                    )}
                 </div>
             </header>
 
-            <section className="glass-card" style={{ padding: '24px' }}>
-                {loading ? (
-                    <p>Loading logs...</p>
-                ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--card-border)', color: '#94a3b8' }}>
-                                <th style={{ padding: '12px' }}>Staff</th>
-                                <th style={{ padding: '12px' }}>Phone Number</th>
-                                <th style={{ padding: '12px' }}>Type</th>
-                                <th style={{ padding: '12px' }}>Duration</th>
-                                <th style={{ padding: '12px' }}>Time</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {logs.map((log) => (
-                                <tr key={log.id} style={{ borderBottom: '1px solid var(--card-border)' }}>
-                                    <td style={{ padding: '12px' }}>{log.staff?.name || "Unknown"}</td>
-                                    <td style={{ padding: '12px' }}>{log.phoneNumber}</td>
-                                    <td style={{ padding: '12px' }}>
+            <div className="glass-card" style={{ overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead>
+                        <tr style={{ background: 'rgba(255, 255, 255, 0.02)', borderBottom: '1px solid var(--card-border)' }}>
+                            <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Staff</th>
+                            <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Phone Number</th>
+                            <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Type</th>
+                            <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Duration</th>
+                            <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {loading && logs.length === 0 ? (
+                            <tr><td colSpan={5} style={{ padding: '48px', textAlign: 'center', color: '#475569' }}>Fetching call history...</td></tr>
+                        ) : logs.length === 0 ? (
+                            <tr><td colSpan={5} style={{ padding: '48px', textAlign: 'center', color: '#475569' }}>No call logs available.</td></tr>
+                        ) : (
+                            logs.map((log) => (
+                                <tr key={log.id} style={{ borderBottom: '1px solid var(--card-border)', transition: 'background 0.2s' }}>
+                                    <td style={{ padding: '16px 24px', fontWeight: 500 }}>{log.staffName || 'Admin'}</td>
+                                    <td style={{ padding: '16px 24px', color: '#38bdf8' }}>{log.phoneNumber}</td>
+                                    <td style={{ padding: '16px 24px' }}>
                                         <span style={{
-                                            padding: '4px 10px',
-                                            borderRadius: '20px',
-                                            fontSize: '0.75rem',
-                                            background: log.callType === 'OUTGOING' ? 'rgba(56, 189, 248, 0.1)' :
-                                                log.callType === 'INCOMING' ? 'rgba(34, 197, 94, 0.1)' :
-                                                    'rgba(244, 63, 94, 0.1)',
-                                            color: log.callType === 'OUTGOING' ? 'var(--primary)' :
-                                                log.callType === 'INCOMING' ? 'var(--success)' :
-                                                    '#f43f5e'
+                                            padding: '4px 8px',
+                                            borderRadius: '4px',
+                                            fontSize: '0.7rem',
+                                            background: log.callType === 'OUTGOING' ? 'rgba(56, 189, 248, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+                                            color: log.callType === 'OUTGOING' ? '#38bdf8' : '#22c55e'
                                         }}>
                                             {log.callType}
                                         </span>
                                     </td>
-                                    <td style={{ padding: '12px' }}>{Math.floor(log.duration / 60)}m {log.duration % 60}s</td>
-                                    <td style={{ padding: '12px' }}>{new Date(log.timestamp).toLocaleString()}</td>
+                                    <td style={{ padding: '16px 24px', color: '#94a3b8' }}>{log.duration}</td>
+                                    <td style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem' }}>
+                                        {new Date(log.timestamp).toLocaleString()}
+                                    </td>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-            </section>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
-}
+};
+
+export default CallLogsPage;
