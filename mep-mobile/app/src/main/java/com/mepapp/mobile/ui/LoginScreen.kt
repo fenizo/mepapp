@@ -13,7 +13,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 import android.util.Log
+import com.mepapp.mobile.R
 import com.mepapp.mobile.data.AuthRepository
 import kotlinx.coroutines.launch
 
@@ -53,6 +57,12 @@ fun LoginScreen(authRepository: AuthRepository, onLoginSuccess: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        Image(
+            painter = painterResource(id = R.drawable.app_logo),
+            contentDescription = "App Logo",
+            modifier = Modifier.size(120.dp).padding(bottom = 24.dp),
+            contentScale = ContentScale.Fit
+        )
         Text("MEP Field Service", fontSize = 28.sp, style = MaterialTheme.typography.headlineLarge)
         Text("Enter your credentials to continue", fontSize = 16.sp, color = MaterialTheme.colorScheme.secondary)
         Spacer(Modifier.height(32.dp))

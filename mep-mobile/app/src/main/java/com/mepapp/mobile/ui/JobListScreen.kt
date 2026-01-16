@@ -13,6 +13,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.mepapp.mobile.R
 import com.mepapp.mobile.network.JobResponse
 import com.mepapp.mobile.network.MepApiService
 import com.mepapp.mobile.network.NetworkModule
@@ -106,7 +109,18 @@ fun JobListScreen(userId: String?, token: String?, onJobClick: (String) -> Unit)
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(title = { Text("My Assigned Jobs", fontWeight = FontWeight.Bold) })
+            TopAppBar(
+                title = { 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(
+                            painter = painterResource(id = R.drawable.app_logo),
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp).padding(end = 8.dp)
+                        )
+                        Text("My Assigned Jobs", fontWeight = FontWeight.Bold) 
+                    }
+                }
+            )
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
