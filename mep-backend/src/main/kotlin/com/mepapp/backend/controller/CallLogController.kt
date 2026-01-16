@@ -26,6 +26,7 @@ class CallLogController(
             phoneNumber = request.phoneNumber,
             duration = request.duration,
             callType = request.callType,
+            contactName = request.contactName,
             timestamp = request.timestamp ?: LocalDateTime.now()
         )
         return callLogRepository.save(callLog)
@@ -54,5 +55,6 @@ data class CallLogRequest(
     val phoneNumber: String,
     val duration: Long,
     val callType: String,
+    val contactName: String? = null,
     val timestamp: LocalDateTime? = null
 )

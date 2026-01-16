@@ -49,6 +49,7 @@ data class CallLogRequest(
     val phoneNumber: String,
     val duration: Long,
     val callType: String,
+    val contactName: String? = null,
     val timestamp: String? = null // ISO format
 )
 data class CallLogResponse(val id: String)

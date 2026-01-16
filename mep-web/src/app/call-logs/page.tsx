@@ -7,6 +7,7 @@ interface CallLog {
     id: string;
     staffName: string;
     phoneNumber: string;
+    contactName: string;
     callType: string;
     duration: string;
     timestamp: string;
@@ -159,6 +160,7 @@ const CallLogsPage = () => {
                     <thead>
                         <tr style={{ background: 'rgba(255, 255, 255, 0.02)', borderBottom: '1px solid var(--card-border)' }}>
                             <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Staff</th>
+                            <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Contact Name</th>
                             <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Phone Number</th>
                             <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Type</th>
                             <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Last Duration (s)</th>
@@ -174,6 +176,7 @@ const CallLogsPage = () => {
                             displayLogs.map((log) => (
                                 <tr key={log.id} style={{ borderBottom: '1px solid var(--card-border)', transition: 'background 0.2s' }}>
                                     <td style={{ padding: '16px 24px', fontWeight: 500 }}>{log.staffName || 'Admin'}</td>
+                                    <td style={{ padding: '16px 24px', fontWeight: 500, color: '#f8fafc' }}>{log.contactName || '-'}</td>
                                     <td style={{ padding: '16px 24px', color: '#38bdf8' }}>{log.phoneNumber}</td>
                                     <td style={{ padding: '16px 24px' }}>
                                         <span style={{

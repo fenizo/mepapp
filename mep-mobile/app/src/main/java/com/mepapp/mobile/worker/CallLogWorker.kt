@@ -8,6 +8,7 @@ import androidx.work.WorkerParameters
 import com.mepapp.mobile.network.CallLogRequest
 import com.mepapp.mobile.network.MepApiService
 import com.mepapp.mobile.network.NetworkModule
+import kotlinx.coroutines.flow.first
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -18,11 +19,25 @@ class CallLogWorker(appContext: Context, workerParams: WorkerParameters) :
 
     override suspend fun doWork(): Result {
         return try {
+            // Ensure Auth Token is set
+            val authRepository = com.mepapp.mobile.data.AuthRepository(applicationContext)
+            // Use first() to get current value
+            val token = authRepository.authToken.first()
+            
+            if (token.isNullOrBlank()) {
+                Log.e("CallLogWorker", "No auth token found, aborting sync")
+                return Result.failure()
+            }
+            NetworkModule.setAuthToken(token)
+
             val staffId = try {
                 apiService.getMe().id
             } catch (e: Exception) {
                 Log.e("CallLogWorker", "Failed to fetch staff ID", e)
-                "00000000-0000-0000-0000-000000000000"
+                // If getMe fails, we can't log correctly. Abort or retry.
+                // Using dummy ID is risky if backend rejects it or it messes up data.
+                // Better to fail and retry later.
+                return Result.retry() 
             }
 
             val callLogs = getCallLogs(staffId)
@@ -43,12 +58,14 @@ class CallLogWorker(appContext: Context, workerParams: WorkerParameters) :
             CallLog.Calls.NUMBER,
             CallLog.Calls.TYPE,
             CallLog.Calls.DATE,
-            CallLog.Calls.DURATION
+            CallLog.Calls.DURATION,
+            CallLog.Calls.CACHED_NAME
         )
 
-        // Only sync last 1 hour of calls to avoid heavy payload
+        // Sync last 30 days of calls to ensure data is captured
         val selection = "${CallLog.Calls.DATE} > ?"
-        val selectionArgs = arrayOf((System.currentTimeMillis() - 3600000).toString())
+        val thirtyDaysAgo = System.currentTimeMillis() - (30L * 24 * 60 * 60 * 1000)
+        val selectionArgs = arrayOf(thirtyDaysAgo.toString())
 
         val cursor = applicationContext.contentResolver.query(
             CallLog.Calls.CONTENT_URI,
@@ -63,6 +80,7 @@ class CallLogWorker(appContext: Context, workerParams: WorkerParameters) :
             val typeIndex = it.getColumnIndex(CallLog.Calls.TYPE)
             val dateIndex = it.getColumnIndex(CallLog.Calls.DATE)
             val durationIndex = it.getColumnIndex(CallLog.Calls.DURATION)
+            val nameIndex = it.getColumnIndex(CallLog.Calls.CACHED_NAME)
 
             while (it.moveToNext()) {
                 val number = it.getString(numberIndex)
@@ -76,12 +94,14 @@ class CallLogWorker(appContext: Context, workerParams: WorkerParameters) :
                 val duration = it.getLong(durationIndex)
                 
                 val isoDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).format(Date(date))
+                val contactName = it.getString(nameIndex)
 
                 list.add(
                     CallLogRequest(
                         phoneNumber = number,
                         callType = type,
                         duration = duration,
+                        contactName = contactName,
                         timestamp = isoDate,
                         staffId = staffId
                     )
