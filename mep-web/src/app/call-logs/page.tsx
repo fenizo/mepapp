@@ -55,6 +55,13 @@ const CallLogsPage = () => {
 
     useEffect(() => {
         fetchLogs();
+
+        // Auto-refresh every 5 seconds to show live sync progress
+        const interval = setInterval(() => {
+            fetchLogs();
+        }, 5000);
+
+        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
@@ -131,6 +138,35 @@ const CallLogsPage = () => {
 
             {/* Stats Cards - Contact Count & Monthly Breakdown */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                {/* Sync Status Card */}
+                <div className="glass-card" style={{ padding: '20px', background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.1), rgba(14, 165, 233, 0.05))' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                        <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#38bdf8' }}>Sync Status</div>
+                        {loading && (
+                            <div style={{
+                                width: '12px',
+                                height: '12px',
+                                borderRadius: '50%',
+                                background: '#38bdf8',
+                                animation: 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                            }}></div>
+                        )}
+                    </div>
+                    {lastUpdated ? (
+                        <>
+                            <div style={{ fontSize: '0.875rem', color: '#94a3b8', marginBottom: '4px' }}>Last Synced</div>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f8fafc' }}>
+                                {lastUpdated.toLocaleTimeString()}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '8px' }}>
+                                {loading ? '🔄 Checking for new logs...' : '✅ Up to date'}
+                            </div>
+                        </>
+                    ) : (
+                        <div style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Connecting...</div>
+                    )}
+                </div>
+
                 {/* Total Contacts Card */}
                 <div className="glass-card" style={{ padding: '20px', textAlign: 'center' }}>
                     <div style={{ fontSize: '0.875rem', color: '#94a3b8', marginBottom: '8px' }}>Total Unique Contacts</div>
