@@ -125,6 +125,46 @@ const CallLogsPage = () => {
                 </div>
             </header>
 
+            {/* Stats Cards - Contact Count & Monthly Breakdown */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                {/* Total Contacts Card */}
+                <div className="glass-card" style={{ padding: '20px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.875rem', color: '#94a3b8', marginBottom: '8px' }}>Total Unique Contacts</div>
+                    <div style={{ fontSize: '2.5rem', fontWeight: 700, color: '#38bdf8' }}>{displayLogs.length}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
+                        {filterMode === 'all' ? 'All time' : filterMode === 'today' ? 'Today' : filterMode === 'yesterday' ? 'Yesterday' : 'Custom date'}
+                    </div>
+                </div>
+
+                {/* Monthly Breakdown */}
+                {filterMode === 'all' && (() => {
+                    // Group logs by month
+                    const monthlyData: { [key: string]: number } = {};
+                    rawLogs.forEach(log => {
+                        const date = new Date(log.timestamp);
+                        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                        monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
+                    });
+
+                    // Get last 3 months
+                    const sortedMonths = Object.keys(monthlyData).sort().reverse().slice(0, 3);
+
+                    return sortedMonths.map(monthKey => {
+                        const [year, month] = monthKey.split('-');
+                        const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'short', year: 'numeric' });
+
+                        return (
+                            <div key={monthKey} className="glass-card" style={{ padding: '20px', textAlign: 'center' }}>
+                                <div style={{ fontSize: '0.875rem', color: '#94a3b8', marginBottom: '8px' }}>{monthName}</div>
+                                <div style={{ fontSize: '2rem', fontWeight: 700, color: '#10b981' }}>{monthlyData[monthKey]}</div>
+                                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>calls logged</div>
+                            </div>
+                        );
+                    });
+                })()}
+            </div>
+
+
             {/* Filter Bar */}
             <div className="glass-card" style={{ padding: '16px', marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '0.9rem', color: '#94a3b8', marginRight: '8px' }}>Filters:</span>
