@@ -17,8 +17,12 @@ class CallLogController(
 ) {
     @PostMapping
     fun logCall(@RequestBody request: CallLogRequest): CallLog {
-        val staff = userRepository.findById(request.staffId).orElseThrow { RuntimeException("Staff not found") }
-        val job = request.jobId?.let { jobRepository.findById(it).orElse(null) }
+        val staffUUID = UUID.fromString(request.staffId)
+        val staff = userRepository.findById(staffUUID).orElseThrow { RuntimeException("Staff not found") }
+        val job = request.jobId?.let { jobId -> 
+            val jobUUID = UUID.fromString(jobId)
+            jobRepository.findById(jobUUID).orElse(null) 
+        }
         
         val callLog = CallLog(
             job = job,
@@ -54,8 +58,8 @@ class CallLogController(
 }
 
 data class CallLogRequest(
-    val jobId: UUID?,
-    val staffId: UUID,
+    val jobId: String?,
+    val staffId: String,  // Changed from UUID to String
     val phoneNumber: String,
     val duration: Long,
     val callType: String,
