@@ -25,6 +25,7 @@ const CallLogsPage = () => {
     const [customDate, setCustomDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [staffList, setStaffList] = useState<{ id: string, name: string }[]>([]);
     const [selectedStaff, setSelectedStaff] = useState<string>('all');
+    const [expandedContact, setExpandedContact] = useState<string | null>(null);
 
     const fetchLogs = () => {
         setLoading(true);
@@ -63,7 +64,7 @@ const CallLogsPage = () => {
     const processLogs = () => {
         let filtered = [...rawLogs];
 
-        // 1. Date Filtering
+        // Date Filtering
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -87,14 +88,10 @@ const CallLogsPage = () => {
             return true;
         }).filter(log => {
             if (selectedStaff === 'all') return true;
-            // The log.staff.id is where we want to filter, but let's check log structure.
-            // backend CallLog has @ManyToOne staff: User.
-            // So log.staff should exist.
             return (log as any).staff?.id === selectedStaff;
         });
 
-        // 2. Deduplication (Group by phone number, keep latest)
-        // We sort by timestamp descending first to ensure the first one we find is the latest
+        // Sort and deduplicate by phone number (keep latest)
         filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
         const deduplicated: CallLog[] = [];
@@ -108,6 +105,13 @@ const CallLogsPage = () => {
         });
 
         setDisplayLogs(deduplicated);
+    };
+
+    // Get all logs for a specific phone number
+    const getContactLogs = (phoneNumber: string): CallLog[] => {
+        return rawLogs
+            .filter(log => log.phoneNumber === phoneNumber)
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     };
 
     return (
@@ -235,51 +239,126 @@ const CallLogsPage = () => {
                 </div>
             </div>
 
-            <div className="glass-card" style={{ overflow: 'hidden' }}>
-                <div className="table-container">
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                        <thead>
-                            <tr style={{ background: 'rgba(255, 255, 255, 0.02)', borderBottom: '1px solid var(--card-border)' }}>
-                                <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Staff</th>
-                                <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Contact Name</th>
-                                <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Phone Number</th>
-                                <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Type</th>
-                                <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Last Duration (s)</th>
-                                <th style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Last Call Time</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading && displayLogs.length === 0 ? (
-                                <tr><td colSpan={6} style={{ padding: '48px', textAlign: 'center', color: '#475569' }}>Fetching call history...</td></tr>
-                            ) : displayLogs.length === 0 ? (
-                                <tr><td colSpan={6} style={{ padding: '48px', textAlign: 'center', color: '#475569' }}>No call logs found for this filter.</td></tr>
-                            ) : (
-                                displayLogs.map((log) => (
-                                    <tr key={log.id} style={{ borderBottom: '1px solid var(--card-border)', transition: 'background 0.2s' }}>
-                                        <td style={{ padding: '16px 24px', fontWeight: 500 }}>{log.staff?.name || 'Admin'}</td>
-                                        <td style={{ padding: '16px 24px', fontWeight: 500, color: '#f8fafc' }}>{log.contactName || '-'}</td>
-                                        <td style={{ padding: '16px 24px', color: '#38bdf8' }}>{log.phoneNumber}</td>
-                                        <td style={{ padding: '16px 24px' }}>
-                                            <span style={{
-                                                padding: '4px 8px',
-                                                borderRadius: '4px',
-                                                fontSize: '0.7rem',
-                                                background: log.callType === 'OUTGOING' ? 'rgba(56, 189, 248, 0.1)' : 'rgba(34, 197, 94, 0.1)',
-                                                color: log.callType === 'OUTGOING' ? '#38bdf8' : '#22c55e'
-                                            }}>
-                                                {log.callType}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: '16px 24px', color: '#94a3b8' }}>{log.duration}</td>
-                                        <td style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '0.875rem' }}>
-                                            {new Date(log.timestamp).toLocaleString()}
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+            {/* Contact Cards */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {loading && displayLogs.length === 0 ? (
+                    <div className="glass-card" style={{ padding: '48px', textAlign: 'center', color: '#475569' }}>
+                        Fetching call history...
+                    </div>
+                ) : displayLogs.length === 0 ? (
+                    <div className="glass-card" style={{ padding: '48px', textAlign: 'center', color: '#475569' }}>
+                        No call logs found for this filter.
+                    </div>
+                ) : (
+                    displayLogs.map((log) => {
+                        const contactLogs = getContactLogs(log.phoneNumber);
+                        const isExpanded = expandedContact === log.phoneNumber;
+                        const totalCalls = contactLogs.length;
+
+                        return (
+                            <div key={log.phoneNumber} className="glass-card" style={{ overflow: 'hidden' }}>
+                                {/* Contact Header - Clickable */}
+                                <div
+                                    onClick={() => setExpandedContact(isExpanded ? null : log.phoneNumber)}
+                                    style={{
+                                        padding: '20px 24px',
+                                        cursor: 'pointer',
+                                        transition: 'background 0.2s',
+                                        background: isExpanded ? 'rgba(56, 189, 248, 0.05)' : 'transparent',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = isExpanded ? 'rgba(56, 189, 248, 0.05)' : 'transparent'}
+                                >
+                                    <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flex: 1 }}>
+                                        {/* Contact Name/Number */}
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f8fafc', marginBottom: '4px' }}>
+                                                {log.contactName || log.phoneNumber}
+                                            </div>
+                                            {log.contactName && (
+                                                <div style={{ fontSize: '0.875rem', color: '#38bdf8' }}>{log.phoneNumber}</div>
+                                            )}
+                                        </div>
+
+                                        {/* Stats */}
+                                        <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+                                            <div style={{ textAlign: 'center' }}>
+                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '2px' }}>Total Calls</div>
+                                                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#38bdf8' }}>{totalCalls}</div>
+                                            </div>
+
+                                            <div style={{ textAlign: 'center' }}>
+                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '2px' }}>Last Call</div>
+                                                <div style={{ fontSize: '0.875rem', color: '#94a3b8' }}>
+                                                    {new Date(log.timestamp).toLocaleDateString()}
+                                                </div>
+                                            </div>
+
+                                            <div style={{ textAlign: 'center' }}>
+                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '2px' }}>Staff</div>
+                                                <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>{log.staff?.name || 'Admin'}</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Expand Icon */}
+                                        <div style={{ fontSize: '1.5rem', color: '#38bdf8', transition: 'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                                            ▼
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Expanded Call History */}
+                                {isExpanded && (
+                                    <div style={{ borderTop: '1px solid var(--card-border)', padding: '16px 24px', background: 'rgba(0, 0, 0, 0.2)' }}>
+                                        <div style={{ fontSize: '0.875rem', color: '#94a3b8', marginBottom: '16px', fontWeight: 500 }}>
+                                            Call History ({totalCalls} calls)
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                            {contactLogs.map((callLog, index) => (
+                                                <div
+                                                    key={callLog.id}
+                                                    style={{
+                                                        padding: '12px 16px',
+                                                        background: 'rgba(255, 255, 255, 0.02)',
+                                                        borderRadius: '8px',
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        borderLeft: `3px solid ${callLog.callType === 'OUTGOING' ? '#38bdf8' : callLog.callType === 'INCOMING' ? '#22c55e' : '#ef4444'}`
+                                                    }}
+                                                >
+                                                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flex: 1 }}>
+                                                        <span style={{
+                                                            padding: '4px 10px',
+                                                            borderRadius: '6px',
+                                                            fontSize: '0.75rem',
+                                                            fontWeight: 600,
+                                                            background: callLog.callType === 'OUTGOING' ? 'rgba(56, 189, 248, 0.15)' : callLog.callType === 'INCOMING' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                                            color: callLog.callType === 'OUTGOING' ? '#38bdf8' : callLog.callType === 'INCOMING' ? '#22c55e' : '#ef4444'
+                                                        }}>
+                                                            {callLog.callType}
+                                                        </span>
+
+                                                        <div style={{ fontSize: '0.875rem', color: '#94a3b8' }}>
+                                                            {new Date(callLog.timestamp).toLocaleString()}
+                                                        </div>
+
+                                                        <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
+                                                            Duration: {callLog.duration}s
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })
+                )}
             </div>
         </div>
     );
