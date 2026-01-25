@@ -41,7 +41,12 @@ object AppUpdater {
     suspend fun checkForUpdate(context: Context): UpdateInfo? {
         return withContext(Dispatchers.IO) {
             try {
-                val retrofit = NetworkModule.createRetrofit("https://api.github.com/")
+                // Create Retrofit instance for GitHub API
+                val retrofit = retrofit2.Retrofit.Builder()
+                    .baseUrl("https://api.github.com/")
+                    .addConverterFactory(retrofit2.converter.gson.GsonConverterFactory.create())
+                    .build()
+                    
                 val service = retrofit.create(GitHubApiService::class.java)
                 val release = service.getLatestRelease()
                 
@@ -50,7 +55,7 @@ object AppUpdater {
                 
                 if (isNewerVersion(latestVersion, CURRENT_VERSION)) {
                     // Find APK asset
-                    val apkAsset = release.assets.firstOrNull { it.name.endsWith(".apk") }
+                    val apkAsset = release.assets.firstOrNull { asset -> asset.name.endsWith(".apk") }
                     if (apkAsset != null) {
                         return@withContext UpdateInfo(
                             version = latestVersion,

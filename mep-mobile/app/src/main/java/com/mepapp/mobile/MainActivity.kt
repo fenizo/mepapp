@@ -170,11 +170,11 @@ class MainActivity : ComponentActivity() {
         val builder = androidx.appcompat.app.AlertDialog.Builder(this)
         builder.setTitle(title)
         builder.setMessage(message)
-        builder.setPositiveButton("Grant Permission") { dialog, _ ->
+        builder.setPositiveButton("Grant Permission") { dialog: android.content.DialogInterface, _: Int ->
             onOkClick()
             dialog.dismiss()
         }
-        builder.setNegativeButton("Not Now") { dialog, _ ->
+        builder.setNegativeButton("Not Now") { dialog: android.content.DialogInterface, _: Int ->
             dialog.dismiss()
         }
         builder.setCancelable(false)
