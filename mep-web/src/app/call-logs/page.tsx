@@ -126,7 +126,7 @@ const CallLogsPage = () => {
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                 <div>
                     <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '4px' }}>Call Logs</h2>
-                    <p style={{ color: '#94a3b8' }}>Monitor and filter field staff communication.</p>
+                    <p style={{ color: '#64748b' }}>Monitor and filter field staff communication.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                     {lastUpdated && <span style={{ fontSize: '0.8rem', color: '#475569' }}>Last updated: {lastUpdated.toLocaleTimeString()}</span>}
@@ -154,7 +154,7 @@ const CallLogsPage = () => {
                     </div>
                     {lastUpdated ? (
                         <>
-                            <div style={{ fontSize: '0.875rem', color: '#94a3b8', marginBottom: '4px' }}>Last Synced</div>
+                            <div style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '4px' }}>Last Synced</div>
                             <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f8fafc' }}>
                                 {lastUpdated.toLocaleTimeString()}
                             </div>
@@ -163,13 +163,13 @@ const CallLogsPage = () => {
                             </div>
                         </>
                     ) : (
-                        <div style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Connecting...</div>
+                        <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Connecting...</div>
                     )}
                 </div>
 
                 {/* Total Contacts Card */}
                 <div className="glass-card" style={{ padding: '20px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.875rem', color: '#94a3b8', marginBottom: '8px' }}>Total Unique Contacts</div>
+                    <div style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '8px' }}>Total Unique Contacts</div>
                     <div style={{ fontSize: '2.5rem', fontWeight: 700, color: '#38bdf8' }}>{displayLogs.length}</div>
                     <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
                         {filterMode === 'all' ? 'All time' : filterMode === 'today' ? 'Today' : filterMode === 'yesterday' ? 'Yesterday' : 'Custom date'}
@@ -195,7 +195,7 @@ const CallLogsPage = () => {
 
                         return (
                             <div key={monthKey} className="glass-card" style={{ padding: '20px', textAlign: 'center' }}>
-                                <div style={{ fontSize: '0.875rem', color: '#94a3b8', marginBottom: '8px' }}>{monthName}</div>
+                                <div style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '8px' }}>{monthName}</div>
                                 <div style={{ fontSize: '2rem', fontWeight: 700, color: '#10b981' }}>{monthlyData[monthKey]}</div>
                                 <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>calls logged</div>
                             </div>
@@ -207,7 +207,7 @@ const CallLogsPage = () => {
 
             {/* Filter Bar */}
             <div className="glass-card" style={{ padding: '16px', marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.9rem', color: '#94a3b8', marginRight: '8px' }}>Filters:</span>
+                <span style={{ fontSize: '0.9rem', color: '#64748b', marginRight: '8px' }}>Filters:</span>
 
                 <button
                     onClick={() => setFilterMode('all')}
@@ -234,7 +234,7 @@ const CallLogsPage = () => {
                 </button>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '12px' }}>
-                    <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Staff:</span>
+                    <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Staff:</span>
                     <select
                         value={selectedStaff}
                         onChange={(e) => setSelectedStaff(e.target.value)}
@@ -254,7 +254,7 @@ const CallLogsPage = () => {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
-                    <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Custom Date:</span>
+                    <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Custom Date:</span>
                     <input
                         type="date"
                         value={customDate}
@@ -322,19 +322,19 @@ const CallLogsPage = () => {
                                         {/* Stats */}
                                         <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
                                             <div style={{ textAlign: 'center' }}>
-                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '2px' }}>Total Calls</div>
+                                                <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '2px' }}>Total Calls</div>
                                                 <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#38bdf8' }}>{totalCalls}</div>
                                             </div>
 
                                             <div style={{ textAlign: 'center' }}>
-                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '2px' }}>Last Call</div>
-                                                <div style={{ fontSize: '0.875rem', color: '#94a3b8' }}>
+                                                <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '2px' }}>Last Call</div>
+                                                <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
                                                     {new Date(log.timestamp).toLocaleDateString()}
                                                 </div>
                                             </div>
 
                                             <div style={{ textAlign: 'center' }}>
-                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '2px' }}>Staff</div>
+                                                <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '2px' }}>Staff</div>
                                                 <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>{log.staff?.name || 'Admin'}</div>
                                             </div>
                                         </div>
@@ -349,7 +349,7 @@ const CallLogsPage = () => {
                                 {/* Expanded Call History */}
                                 {isExpanded && (
                                     <div style={{ borderTop: '1px solid var(--card-border)', padding: '16px 24px', background: 'rgba(0, 0, 0, 0.2)' }}>
-                                        <div style={{ fontSize: '0.875rem', color: '#94a3b8', marginBottom: '16px', fontWeight: 500 }}>
+                                        <div style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '16px', fontWeight: 500 }}>
                                             Call History ({totalCalls} calls)
                                         </div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -378,7 +378,7 @@ const CallLogsPage = () => {
                                                             {callLog.callType}
                                                         </span>
 
-                                                        <div style={{ fontSize: '0.875rem', color: '#94a3b8' }}>
+                                                        <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
                                                             {new Date(callLog.timestamp).toLocaleString()}
                                                         </div>
 
@@ -408,7 +408,7 @@ const filterStyle = (isActive: boolean): React.CSSProperties => ({
     cursor: 'pointer',
     border: isActive ? '1px solid var(--primary)' : '1px solid var(--card-border)',
     background: isActive ? 'rgba(56, 189, 248, 0.1)' : 'transparent',
-    color: isActive ? 'var(--primary)' : '#94a3b8',
+    color: isActive ? 'var(--primary)' : '#64748b',
     transition: 'all 0.2s'
 });
 

@@ -65,24 +65,24 @@ export default function Dashboard() {
         <div>
             <header style={{ marginBottom: '32px' }}>
                 <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '4px' }}>Admin Dashboard</h2>
-                <p style={{ color: '#94a3b8' }}>Welcome back, here is what is happening today.</p>
+                <p style={{ color: '#64748b' }}>Welcome back, here is what is happening today.</p>
             </header>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', marginBottom: '32px' }}>
                 <div className="glass-card" style={{ padding: '24px' }}>
-                    <div style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '8px' }}>Total Jobs</div>
+                    <div style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '8px' }}>Total Jobs</div>
                     <div style={{ fontSize: '1.875rem', fontWeight: 700, color: 'var(--primary)' }}>{totalCalls}</div>
                 </div>
                 <div className="glass-card" style={{ padding: '24px' }}>
-                    <div style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '8px' }}>Completed Jobs</div>
+                    <div style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '8px' }}>Completed Jobs</div>
                     <div style={{ fontSize: '1.875rem', fontWeight: 700, color: '#22c55e' }}>{completedJobs}</div>
                 </div>
                 <div className="glass-card" style={{ padding: '24px' }}>
-                    <div style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '8px' }}>Pending Jobs</div>
+                    <div style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '8px' }}>Pending Jobs</div>
                     <div style={{ fontSize: '1.875rem', fontWeight: 700, color: 'var(--warning)' }}>{pendingJobs}</div>
                 </div>
                 <div className="glass-card" style={{ padding: '24px' }}>
-                    <div style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '8px' }}>Synced Logs</div>
+                    <div style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '8px' }}>Synced Logs</div>
                     <div style={{ fontSize: '1.875rem', fontWeight: 700, color: '#38bdf8' }}>{callLogs.length}</div>
                 </div>
             </div>
@@ -95,11 +95,11 @@ export default function Dashboard() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
                             <tr style={{ borderBottom: '1px solid var(--card-border)' }}>
-                                <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Customer</th>
-                                <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Service</th>
-                                <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Staff</th>
-                                <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Status</th>
-                                <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 500 }}>Action</th>
+                                <th style={{ padding: '12px 16px', color: '#64748b', fontSize: '0.875rem', fontWeight: 500 }}>Customer</th>
+                                <th style={{ padding: '12px 16px', color: '#64748b', fontSize: '0.875rem', fontWeight: 500 }}>Service</th>
+                                <th style={{ padding: '12px 16px', color: '#64748b', fontSize: '0.875rem', fontWeight: 500 }}>Staff</th>
+                                <th style={{ padding: '12px 16px', color: '#64748b', fontSize: '0.875rem', fontWeight: 500 }}>Status</th>
+                                <th style={{ padding: '12px 16px', color: '#64748b', fontSize: '0.875rem', fontWeight: 500 }}>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -110,7 +110,7 @@ export default function Dashboard() {
                                     <tr key={job.id} style={{ borderBottom: '1px solid var(--card-border)' }}>
                                         <td style={{ padding: '16px', fontWeight: 500 }}>{job.customer?.name || 'Unknown'}</td>
                                         <td style={{ padding: '16px' }}>{job.serviceType}</td>
-                                        <td style={{ padding: '16px', color: '#94a3b8' }}>{job.staff?.username || 'Unassigned'}</td>
+                                        <td style={{ padding: '16px', color: '#64748b' }}>{job.staff?.username || 'Unassigned'}</td>
                                         <td style={{ padding: '16px' }}>
                                             <span style={{
                                                 padding: '4px 10px',

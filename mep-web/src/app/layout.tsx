@@ -74,12 +74,12 @@ export default function RootLayout({
           </div>
 
           <nav style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
-            <a href="/" style={{ color: pathname === '/' ? 'var(--primary)' : '#94a3b8', textDecoration: 'none', fontWeight: pathname === '/' ? 600 : 400 }}>Dashboard</a>
-            <a href="/jobs" style={{ color: pathname === '/jobs' ? 'var(--primary)' : '#94a3b8', textDecoration: 'none', fontWeight: pathname === '/jobs' ? 600 : 400 }}>Jobs</a>
-            <a href="/call-logs" style={{ color: pathname === '/call-logs' ? 'var(--primary)' : '#94a3b8', textDecoration: 'none', fontWeight: pathname === '/call-logs' ? 600 : 400 }}>Call Logs</a>
-            <a href="/customers" style={{ color: pathname === '/customers' ? 'var(--primary)' : '#94a3b8', textDecoration: 'none', fontWeight: pathname === '/customers' ? 600 : 400 }}>Customers</a>
-            <a href="/staff" style={{ color: pathname === '/staff' ? 'var(--primary)' : '#94a3b8', textDecoration: 'none', fontWeight: pathname === '/staff' ? 600 : 400 }}>Staff</a>
-            <a href="/settings" style={{ color: pathname === '/settings' ? 'var(--primary)' : '#94a3b8', textDecoration: 'none', fontWeight: pathname === '/settings' ? 600 : 400 }}>Settings</a>
+            <a href="/" style={{ color: pathname === '/' ? 'var(--primary)' : '#64748b', textDecoration: 'none', fontWeight: pathname === '/' ? 600 : 400 }}>Dashboard</a>
+            <a href="/jobs" style={{ color: pathname === '/jobs' ? 'var(--primary)' : '#64748b', textDecoration: 'none', fontWeight: pathname === '/jobs' ? 600 : 400 }}>Jobs</a>
+            <a href="/call-logs" style={{ color: pathname === '/call-logs' ? 'var(--primary)' : '#64748b', textDecoration: 'none', fontWeight: pathname === '/call-logs' ? 600 : 400 }}>Call Logs</a>
+            <a href="/customers" style={{ color: pathname === '/customers' ? 'var(--primary)' : '#64748b', textDecoration: 'none', fontWeight: pathname === '/customers' ? 600 : 400 }}>Customers</a>
+            <a href="/staff" style={{ color: pathname === '/staff' ? 'var(--primary)' : '#64748b', textDecoration: 'none', fontWeight: pathname === '/staff' ? 600 : 400 }}>Staff</a>
+            <a href="/settings" style={{ color: pathname === '/settings' ? 'var(--primary)' : '#64748b', textDecoration: 'none', fontWeight: pathname === '/settings' ? 600 : 400 }}>Settings</a>
           </nav>
 
           <div style={{ marginTop: 'auto', borderTop: '1px solid var(--card-border)', paddingTop: '20px' }}>
