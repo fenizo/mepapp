@@ -169,43 +169,72 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
+    
     private fun setupCallLogSync() {
-        // Start the foreground service for continuous syncing
+        // Use WorkManager for guaranteed periodic sync
         lifecycleScope.launch {
             try {
                 val authRepository = com.mepapp.mobile.data.AuthRepository(this@MainActivity)
-                // Check if user is authenticated
                 authRepository.authToken.collect { token ->
                     if (!token.isNullOrBlank()) {
-                        // Start foreground service
-                        com.mepapp.mobile.service.CallLogSyncService.start(this@MainActivity)
-                        Log.d("MainActivity", "Foreground sync service started")
+                        // Schedule WorkManager periodic sync (Android minimum is 15 minutes)
+                        schedulePeriodicSync()
+                        Log.d("MainActivity", "WorkManager periodic sync scheduled")
                     } else {
-                        // Stop service if user logs out
-                        com.mepapp.mobile.service.CallLogSyncService.stop(this@MainActivity)
-                        Log.d("MainActivity", "Foreground sync service stopped")
+                        // Cancel sync if user logs out
+                        cancelPeriodicSync()
+                        Log.d("MainActivity", "WorkManager periodic sync cancelled")
                     }
                 }
             } catch (e: Exception) {
-                Log.e("MainActivity", "Error managing sync service", e)
+                Log.e("MainActivity", "Error managing WorkManager sync", e)
             }
         }
     }
     
+    private fun schedulePeriodicSync() {
+        val constraints = androidx.work.Constraints.Builder()
+            .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+            .build()
+        
+        val workRequest = androidx.work.PeriodicWorkRequestBuilder<com.mepapp.mobile.worker.CallLogWorker>(
+            15, // Repeat every 15 minutes (Android minimum for periodic work)
+            java.util.concurrent.TimeUnit.MINUTES
+        )
+            .setConstraints(constraints)
+            .setBackoffCriteria(
+                androidx.work.BackoffPolicy.EXPONENTIAL,
+                androidx.work.PeriodicWorkRequest.MIN_BACKOFF_MILLIS,
+                java.util.concurrent.TimeUnit.MILLISECONDS
+            )
+            .build()
+        
+        androidx.work.WorkManager.getInstance(applicationContext)
+            .enqueueUniquePeriodicWork(
+                "CallLogSync",
+                androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+                workRequest
+            )
+    }
+    
+    private fun cancelPeriodicSync() {
+        androidx.work.WorkManager.getInstance(applicationContext)
+            .cancelUniqueWork("CallLogSync")
+    }
+    
     override fun onResume() {
         super.onResume()
-        // Ensure service is running every time app comes to foreground
+        // Ensure WorkManager sync is scheduled when app comes to foreground
         lifecycleScope.launch {
             try {
                 val authRepository = com.mepapp.mobile.data.AuthRepository(this@MainActivity)
                 val token = authRepository.authToken.first()
                 if (!token.isNullOrBlank()) {
-                    com.mepapp.mobile.service.CallLogSyncService.start(this@MainActivity)
-                    Log.d("MainActivity", "Service check on resume - started")
+                    schedulePeriodicSync()
+                    Log.d("MainActivity", "WorkManager check on resume - scheduled")
                 }
             } catch (e: Exception) {
-                Log.e("MainActivity", "Error checking service on resume", e)
+                Log.e("MainActivity", "Error checking WorkManager on resume", e)
             }
         }
     }
