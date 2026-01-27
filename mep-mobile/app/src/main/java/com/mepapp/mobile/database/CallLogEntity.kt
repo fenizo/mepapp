@@ -1,9 +1,13 @@
 package com.mepapp.mobile.database
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "call_logs")
+@Entity(
+    tableName = "call_logs",
+    indices = [Index(value = ["phoneCallId"], unique = true)]
+)
 data class CallLogEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

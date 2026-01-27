@@ -172,7 +172,10 @@ fun CallLogsScreen(onBack: () -> Unit) {
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(callLogs) { callLog ->
+                    items(
+                        items = callLogs,
+                        key = { it.id }
+                    ) { callLog ->
                         CallLogItem(callLog)
                     }
                 }
