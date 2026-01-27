@@ -140,11 +140,17 @@ class PhoneStateReceiver : BroadcastReceiver() {
                     // Check if already exists
                     val exists = callLogDao.callLogExists(callDetails.callId) > 0
                     if (!exists) {
-                        callLogDao.insertCallLog(callEntity)
-                        Log.d(TAG, "Call saved to LOCAL database (OFFLINE OK): ${callDetails.number}")
+                        // Insert and get the actual ID
+                        val insertedId = callLogDao.insertCallLog(callEntity)
+                        if (insertedId > 0) {
+                            Log.d(TAG, "Call saved to LOCAL database (ID=$insertedId): ${callDetails.number}")
 
-                        // Try to sync immediately if online (non-blocking)
-                        syncToServer(context, callEntity)
+                            // Try to sync immediately if online (non-blocking)
+                            // Use the actual inserted ID for marking as synced
+                            syncToServer(context, callEntity.copy(id = insertedId))
+                        } else {
+                            Log.w(TAG, "Insert returned 0 or -1, likely duplicate")
+                        }
                     }
                 }
 

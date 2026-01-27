@@ -254,18 +254,48 @@ class CallLogSyncService : Service() {
                 )
             }
 
-            // Upload to backend
-            apiService.logCalls(callLogRequests)
-            Log.d(TAG, "Uploaded ${callLogRequests.size} call logs to server")
+            // Upload to backend - sync one by one to identify failures
+            Log.d(TAG, "=== STARTING SERVER SYNC ===")
+            Log.d(TAG, "Attempting to sync ${unsyncedLogs.size} call logs")
 
-            // Mark as synced
-            callLogDao.markAsSynced(unsyncedLogs.map { it.id })
+            var successCount = 0
+            val successIds = mutableListOf<Long>()
 
-            // Update notification
-            updateNotification("Synced: ${SimpleDateFormat("HH:mm:ss", Locale.US).format(Date())} | ${unsyncedLogs.size} uploaded")
+            for (entity in unsyncedLogs) {
+                try {
+                    val request = CallLogRequest(
+                        phoneNumber = entity.phoneNumber,
+                        callType = entity.callType,
+                        duration = entity.duration,
+                        contactName = entity.contactName,
+                        timestamp = entity.timestamp,
+                        staffId = entity.staffId
+                    )
+                    Log.d(TAG, "Syncing: id=${entity.id}, phone=${entity.phoneNumber}, staffId=${entity.staffId}")
+
+                    apiService.logCall(request) // Use single call API
+                    successIds.add(entity.id)
+                    successCount++
+                    Log.d(TAG, "SUCCESS: Synced call ${entity.id}")
+                } catch (e: Exception) {
+                    Log.e(TAG, "FAILED to sync call ${entity.id}: ${e.message}")
+                }
+            }
+
+            // Mark successful ones as synced
+            if (successIds.isNotEmpty()) {
+                callLogDao.markAsSynced(successIds)
+                Log.d(TAG, "Marked ${successIds.size} logs as synced")
+                updateNotification("Synced $successCount/${unsyncedLogs.size} calls")
+            } else {
+                Log.w(TAG, "No calls were synced successfully!")
+                updateNotification("Sync failed - ${unsyncedLogs.size} pending")
+            }
+
+            Log.d(TAG, "=== SYNC COMPLETE: $successCount/${unsyncedLogs.size} ===")
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error syncing to server (will retry later)", e)
+            Log.e(TAG, "=== SYNC ERROR ===", e)
             // Don't crash - data is safe in local database
         }
     }
