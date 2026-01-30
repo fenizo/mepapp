@@ -180,8 +180,8 @@ class CallLogSyncService : Service() {
                     Log.e(TAG, "Error during sync", e)
                 }
                 
-                // Wait 5 seconds before next sync
-                delay(5000)
+                // Wait 30 seconds before next sync (was 5 seconds - too aggressive)
+                delay(30000)
             }
         }
     }
@@ -269,9 +269,10 @@ class CallLogSyncService : Service() {
                         duration = entity.duration,
                         contactName = entity.contactName,
                         timestamp = entity.timestamp,
-                        staffId = entity.staffId
+                        staffId = entity.staffId,
+                        phoneCallId = entity.phoneCallId // Unique ID for deduplication on server
                     )
-                    Log.d(TAG, "Syncing: id=${entity.id}, phone=${entity.phoneNumber}, staffId=${entity.staffId}")
+                    Log.d(TAG, "Syncing: id=${entity.id}, phone=${entity.phoneNumber}, staffId=${entity.staffId}, phoneCallId=${entity.phoneCallId}")
 
                     apiService.logCall(request) // Use single call API
                     successIds.add(entity.id)

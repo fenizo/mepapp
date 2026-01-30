@@ -55,7 +55,8 @@ data class CallLogRequest(
     val duration: Long,
     val callType: String,
     val contactName: String? = null,
-    val timestamp: String? = null // ISO format
+    val timestamp: String? = null, // ISO format
+    val phoneCallId: String? = null // Unique ID from mobile device to prevent duplicates
 )
 data class CallLogResponse(val id: String)
 

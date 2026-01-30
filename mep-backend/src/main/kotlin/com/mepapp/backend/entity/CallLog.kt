@@ -5,7 +5,9 @@ import java.time.LocalDateTime
 import java.util.UUID
 
 @Entity
-@Table(name = "call_logs")
+@Table(name = "call_logs", uniqueConstraints = [
+    UniqueConstraint(columnNames = ["phone_call_id", "staff_id"])
+])
 data class CallLog(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -32,5 +34,8 @@ data class CallLog(
     val contactName: String? = null,
 
     @Column(nullable = false)
-    val timestamp: LocalDateTime = LocalDateTime.now()
+    val timestamp: LocalDateTime = LocalDateTime.now(),
+
+    @Column(name = "phone_call_id", nullable = true)
+    val phoneCallId: String? = null // Unique ID from mobile device to prevent duplicates
 )

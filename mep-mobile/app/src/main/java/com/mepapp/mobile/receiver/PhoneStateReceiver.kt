@@ -9,9 +9,6 @@ import android.util.Log
 import com.mepapp.mobile.data.AuthRepository
 import com.mepapp.mobile.database.AppDatabase
 import com.mepapp.mobile.database.CallLogEntity
-import com.mepapp.mobile.network.CallLogRequest
-import com.mepapp.mobile.network.MepApiService
-import com.mepapp.mobile.network.NetworkModule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -144,13 +141,13 @@ class PhoneStateReceiver : BroadcastReceiver() {
                         val insertedId = callLogDao.insertCallLog(callEntity)
                         if (insertedId > 0) {
                             Log.d(TAG, "Call saved to LOCAL database (ID=$insertedId): ${callDetails.number}")
-
-                            // Try to sync immediately if online (non-blocking)
-                            // Use the actual inserted ID for marking as synced
-                            syncToServer(context, callEntity.copy(id = insertedId))
+                            // DO NOT sync immediately - CallLogSyncService handles all syncing
+                            // This prevents duplicate syncs to server
                         } else {
                             Log.w(TAG, "Insert returned 0 or -1, likely duplicate")
                         }
+                    } else {
+                        Log.d(TAG, "Call already exists in database: ${callDetails.callId}")
                     }
                 }
 
@@ -213,46 +210,6 @@ class PhoneStateReceiver : BroadcastReceiver() {
             Log.e(TAG, "Error reading call log", e)
         }
         return null
-    }
-    
-    private suspend fun syncToServer(context: Context, callEntity: CallLogEntity) {
-        try {
-            // Check network first - don't fail if offline
-            val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-            val network = connectivityManager.activeNetwork
-            if (network == null) {
-                Log.d(TAG, "No network - call saved locally, will sync when online")
-                return
-            }
-
-            val authRepository = AuthRepository(context)
-            val token = authRepository.authToken.first()
-
-            if (!token.isNullOrBlank()) {
-                NetworkModule.setAuthToken(token)
-                val apiService = NetworkModule.createService<MepApiService>()
-
-                val callRequest = CallLogRequest(
-                    phoneNumber = callEntity.phoneNumber,
-                    callType = callEntity.callType,
-                    duration = callEntity.duration,
-                    contactName = callEntity.contactName,
-                    timestamp = callEntity.timestamp,
-                    staffId = callEntity.staffId
-                )
-
-                apiService.logCalls(listOf(callRequest))
-
-                // Mark as synced
-                val database = AppDatabase.getDatabase(context)
-                database.callLogDao().markAsSynced(listOf(callEntity.id))
-
-                Log.d(TAG, "Call synced to server: ${callEntity.phoneNumber}")
-            }
-        } catch (e: Exception) {
-            // Non-fatal - data is safe in local database, will sync later
-            Log.d(TAG, "Server sync failed (offline?) - call is saved locally, will retry: ${e.message}")
-        }
     }
     
     data class CallDetails(

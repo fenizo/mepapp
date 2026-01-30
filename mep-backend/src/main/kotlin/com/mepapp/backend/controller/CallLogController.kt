@@ -18,12 +18,25 @@ class CallLogController(
     @PostMapping
     fun logCall(@RequestBody request: CallLogRequest): CallLog {
         val staffUUID = UUID.fromString(request.staffId)
-        val staff = userRepository.findById(staffUUID).orElseThrow { RuntimeException("Staff not found") }
-        val job = request.jobId?.let { jobId -> 
-            val jobUUID = UUID.fromString(jobId)
-            jobRepository.findById(jobUUID).orElse(null) 
+
+        // Check for duplicate using phoneCallId (if provided)
+        if (!request.phoneCallId.isNullOrBlank()) {
+            if (callLogRepository.existsByPhoneCallIdAndStaffId(request.phoneCallId, staffUUID)) {
+                // Return existing - don't create duplicate
+                val existing = callLogRepository.findByStaffIdOrderByTimestampDesc(staffUUID)
+                    .find { it.phoneCallId == request.phoneCallId }
+                if (existing != null) {
+                    return existing
+                }
+            }
         }
-        
+
+        val staff = userRepository.findById(staffUUID).orElseThrow { RuntimeException("Staff not found") }
+        val job = request.jobId?.let { jobId ->
+            val jobUUID = UUID.fromString(jobId)
+            jobRepository.findById(jobUUID).orElse(null)
+        }
+
         val callLog = CallLog(
             job = job,
             staff = staff,
@@ -31,7 +44,8 @@ class CallLogController(
             duration = request.duration,
             callType = request.callType,
             contactName = request.contactName,
-            timestamp = request.timestamp ?: LocalDateTime.now()
+            timestamp = request.timestamp ?: LocalDateTime.now(),
+            phoneCallId = request.phoneCallId
         )
         return callLogRepository.save(callLog)
     }
@@ -64,5 +78,6 @@ data class CallLogRequest(
     val duration: Long,
     val callType: String,
     val contactName: String? = null,
-    val timestamp: LocalDateTime? = null
+    val timestamp: LocalDateTime? = null,
+    val phoneCallId: String? = null  // Unique ID from mobile device to prevent duplicates
 )

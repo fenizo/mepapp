@@ -10,4 +10,5 @@ interface CallLogRepository : JpaRepository<CallLog, UUID> {
     fun findByJobIdOrderByTimestampDesc(jobId: UUID): List<CallLog>
     fun findByStaffIdOrderByTimestampDesc(staffId: UUID): List<CallLog>
     fun findAllByOrderByTimestampDesc(): List<CallLog>
+    fun existsByPhoneCallIdAndStaffId(phoneCallId: String, staffId: UUID): Boolean
 }
