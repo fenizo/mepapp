@@ -137,47 +137,59 @@ fun JobListScreen(userId: String?, token: String?, onJobClick: (String) -> Unit,
                     // Status Indicators in Top Right
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.padding(end = 16.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(end = 12.dp)
                     ) {
                         // Call Logs Button
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(8.dp),
                             color = Color(0xFF1E293B),
-                            onClick = onLogsClick,
-                            modifier = Modifier.padding(vertical = 4.dp)
+                            onClick = onLogsClick
                         ) {
                             Text(
                                 text = "\uD83D\uDCDE",
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                 fontSize = 16.sp
                             )
                         }
 
-                        // Sync Timer
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFF1E293B),
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = "${nextSyncIn}s",
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF38BDF8)
-                            )
-                        }
-                        
-                        // Sync Status Indicator (Green = healthy, Red = no sync for 24+ hours)
-                        Box(
-                            modifier = Modifier
-                                .size(12.dp)
-                                .background(
-                                    color = if (isSyncHealthy) Color(0xFF10B981) else Color(0xFFEF4444),
-                                    shape = CircleShape
-                                )
+                        // Status Pill with dot + text
+                        val statusColor = if (isSyncHealthy) Color(0xFF10B981) else Color(0xFFEF4444)
+                        val pulseAnimation = rememberInfiniteTransition(label = "pulse")
+                        val pulseScale by pulseAnimation.animateFloat(
+                            initialValue = 1f,
+                            targetValue = 1.3f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(800, easing = FastOutSlowInEasing),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "pulseScale"
                         )
+
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = statusColor.copy(alpha = 0.15f)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                // Animated dot
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .scale(if (isSyncHealthy) pulseScale else 1f)
+                                        .background(statusColor, CircleShape)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isSyncHealthy) "LIVE" else "OFFLINE",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = statusColor
+                                )
+                            }
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
