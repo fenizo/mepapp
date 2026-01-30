@@ -4,8 +4,14 @@ import com.mepapp.backend.entity.CallLog
 import com.mepapp.backend.repository.CallLogRepository
 import com.mepapp.backend.repository.JobRepository
 import com.mepapp.backend.repository.UserRepository
+import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import java.io.ByteArrayOutputStream
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 @RestController
@@ -79,6 +85,86 @@ class CallLogController(
             "totalDeleted" to countBefore,
             "message" to "All call logs deleted. Mobile app will re-sync with deduplication."
         )
+    }
+
+    @GetMapping("/export/excel")
+    fun exportToExcel(): ResponseEntity<ByteArray> {
+        val logs = callLogRepository.findAllByOrderByTimestampDesc()
+
+        // Group by phone number to get unique contacts with their details
+        val contactsMap = logs.groupBy { it.phoneNumber }
+
+        val workbook = XSSFWorkbook()
+        val sheet = workbook.createSheet("Contacts")
+
+        // Create header row with bold style
+        val headerStyle = workbook.createCellStyle()
+        val headerFont = workbook.createFont()
+        headerFont.bold = true
+        headerStyle.setFont(headerFont)
+
+        val headerRow = sheet.createRow(0)
+        val headers = listOf(
+            "Phone Number",
+            "Contact Name",
+            "Total Calls",
+            "Incoming Calls",
+            "Outgoing Calls",
+            "Missed Calls",
+            "Total Duration (sec)",
+            "Last Call Date",
+            "Last Call Type",
+            "Staff Name"
+        )
+        headers.forEachIndexed { index, header ->
+            val cell = headerRow.createCell(index)
+            cell.setCellValue(header)
+            cell.cellStyle = headerStyle
+        }
+
+        // Add data rows - one row per unique contact
+        var rowNum = 1
+        val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+
+        contactsMap.forEach { (phoneNumber, callLogs) ->
+            val row = sheet.createRow(rowNum++)
+
+            // Get the most recent call for contact details
+            val latestCall = callLogs.maxByOrNull { it.timestamp }
+
+            // Calculate stats
+            val incomingCount = callLogs.count { it.callType == "INCOMING" }
+            val outgoingCount = callLogs.count { it.callType == "OUTGOING" }
+            val missedCount = callLogs.count { it.callType == "MISSED" }
+            val totalDuration = callLogs.sumOf { it.duration }
+
+            row.createCell(0).setCellValue(phoneNumber)
+            row.createCell(1).setCellValue(latestCall?.contactName ?: "")
+            row.createCell(2).setCellValue(callLogs.size.toDouble())
+            row.createCell(3).setCellValue(incomingCount.toDouble())
+            row.createCell(4).setCellValue(outgoingCount.toDouble())
+            row.createCell(5).setCellValue(missedCount.toDouble())
+            row.createCell(6).setCellValue(totalDuration.toDouble())
+            row.createCell(7).setCellValue(latestCall?.timestamp?.format(dateFormatter) ?: "")
+            row.createCell(8).setCellValue(latestCall?.callType ?: "")
+            row.createCell(9).setCellValue(latestCall?.staff?.name ?: "")
+        }
+
+        // Auto-size columns
+        headers.indices.forEach { sheet.autoSizeColumn(it) }
+
+        // Write to byte array
+        val outputStream = ByteArrayOutputStream()
+        workbook.write(outputStream)
+        workbook.close()
+
+        val headers2 = HttpHeaders()
+        headers2.contentType = MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        headers2.setContentDispositionFormData("attachment", "contacts_${LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))}.xlsx")
+
+        return ResponseEntity.ok()
+            .headers(headers2)
+            .body(outputStream.toByteArray())
     }
 
 }

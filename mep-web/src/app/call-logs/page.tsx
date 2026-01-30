@@ -130,6 +130,25 @@ const CallLogsPage = () => {
                 </div>
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                     {lastUpdated && <span style={{ fontSize: '0.8rem', color: '#374151' }}>Last updated: {lastUpdated.toLocaleTimeString()}</span>}
+                    <button
+                        onClick={() => {
+                            window.open('https://staging.maduraielectriciansandplumbers.com/api/call-logs/export/excel', '_blank');
+                        }}
+                        style={{
+                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                            border: 'none',
+                            color: 'white',
+                            padding: '10px 20px',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                        }}
+                    >
+                        📥 Download Excel
+                    </button>
                     <button onClick={fetchLogs} disabled={loading} className="btn-primary">
                         {loading ? 'Updating...' : 'Refresh Logs'}
                     </button>

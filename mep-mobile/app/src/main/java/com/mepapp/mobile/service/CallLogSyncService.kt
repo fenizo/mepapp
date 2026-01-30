@@ -318,22 +318,19 @@ class CallLogSyncService : Service() {
             CallLog.Calls.DURATION,
             CallLog.Calls.CACHED_NAME
         )
-        
-        // Smart sync: First time = 240 days (8 months, includes August 2025), subsequent = 30 days (ongoing)
-        val prefs = applicationContext.getSharedPreferences("mep_app_prefs", android.content.Context.MODE_PRIVATE)
-        val hasHistoricalSync = prefs.getBoolean("historical_sync_complete", false)
-        
-        val daysToSync = if (hasHistoricalSync) {
-            30L // Ongoing: last 30 days
-        } else {
-            240L // First time: last 8 months (ensures August 2025 is included)
+
+        // MINIMUM DATE: August 1, 2025 - don't sync calls before this date
+        val minDateCalendar = Calendar.getInstance().apply {
+            set(2025, Calendar.AUGUST, 1, 0, 0, 0)
+            set(Calendar.MILLISECOND, 0)
         }
-        
-        val daysAgo = System.currentTimeMillis() - (daysToSync * 24 * 60 * 60 * 1000)
-        val selection = "${CallLog.Calls.DATE} > ?"
-        val selectionArgs = arrayOf(daysAgo.toString())
-        
-        Log.d(TAG, "Syncing last $daysToSync days of call logs (historical_sync_complete=$hasHistoricalSync)")
+        val minDateMillis = minDateCalendar.timeInMillis
+
+        // Only sync calls from August 1, 2025 onwards
+        val selection = "${CallLog.Calls.DATE} >= ?"
+        val selectionArgs = arrayOf(minDateMillis.toString())
+
+        Log.d(TAG, "Syncing call logs from August 1, 2025 onwards")
         
         val cursor = applicationContext.contentResolver.query(
             CallLog.Calls.CONTENT_URI,
@@ -380,12 +377,7 @@ class CallLogSyncService : Service() {
             }
         }
         
-        // Mark historical sync as complete after first successful sync
-        if (!hasHistoricalSync && list.isNotEmpty()) {
-            prefs.edit().putBoolean("historical_sync_complete", true).apply()
-            Log.d(TAG, "Historical sync complete! Saved ${list.size} call logs. Future syncs will use 30-day window.")
-        }
-        
+        Log.d(TAG, "Found ${list.size} call logs from August 1, 2025 onwards")
         return list
     }
     
