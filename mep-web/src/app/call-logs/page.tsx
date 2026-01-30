@@ -27,13 +27,21 @@ const CallLogsPage = () => {
     const [selectedStaff, setSelectedStaff] = useState<string>('all');
     const [expandedContact, setExpandedContact] = useState<string | null>(null);
 
+    // August 1, 2025 cutoff date
+    const AUG_2025_CUTOFF = new Date(2025, 7, 1, 0, 0, 0, 0).getTime(); // Month is 0-indexed, so 7 = August
+
     const fetchLogs = () => {
         setLoading(true);
         apiFetch('/api/call-logs')
             .then(res => res.json())
             .then(data => {
                 if (Array.isArray(data)) {
-                    setRawLogs(data);
+                    // Filter out logs before August 1, 2025
+                    const filteredData = data.filter((log: CallLog) => {
+                        const logTime = new Date(log.timestamp).getTime();
+                        return logTime >= AUG_2025_CUTOFF;
+                    });
+                    setRawLogs(filteredData);
                 }
                 setLoading(false);
                 setLastUpdated(new Date());
@@ -156,7 +164,7 @@ const CallLogsPage = () => {
             </header>
 
             {/* Stats Cards - Contact Count & Monthly Breakdown */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
                 {/* Sync Status Card */}
                 <div className="glass-card" style={{ padding: '20px', background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.1), rgba(14, 165, 233, 0.05))' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
@@ -185,6 +193,47 @@ const CallLogsPage = () => {
                         <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Connecting...</div>
                     )}
                 </div>
+
+                {/* Today's Unique Contacts */}
+                {(() => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const todayContacts = new Set(
+                        rawLogs.filter(log => {
+                            const logDate = new Date(log.timestamp);
+                            logDate.setHours(0, 0, 0, 0);
+                            return logDate.getTime() === today.getTime();
+                        }).map(log => log.phoneNumber)
+                    );
+                    return (
+                        <div className="glass-card" style={{ padding: '20px', textAlign: 'center', background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(22, 163, 74, 0.05))' }}>
+                            <div style={{ fontSize: '0.875rem', color: '#22c55e', marginBottom: '8px', fontWeight: 500 }}>Today's Contacts</div>
+                            <div style={{ fontSize: '2.5rem', fontWeight: 700, color: '#22c55e' }}>{todayContacts.size}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>Unique numbers</div>
+                        </div>
+                    );
+                })()}
+
+                {/* Yesterday's Unique Contacts */}
+                {(() => {
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    yesterday.setHours(0, 0, 0, 0);
+                    const yesterdayContacts = new Set(
+                        rawLogs.filter(log => {
+                            const logDate = new Date(log.timestamp);
+                            logDate.setHours(0, 0, 0, 0);
+                            return logDate.getTime() === yesterday.getTime();
+                        }).map(log => log.phoneNumber)
+                    );
+                    return (
+                        <div className="glass-card" style={{ padding: '20px', textAlign: 'center', background: 'linear-gradient(135deg, rgba(251, 146, 60, 0.1), rgba(234, 88, 12, 0.05))' }}>
+                            <div style={{ fontSize: '0.875rem', color: '#f97316', marginBottom: '8px', fontWeight: 500 }}>Yesterday's Contacts</div>
+                            <div style={{ fontSize: '2.5rem', fontWeight: 700, color: '#f97316' }}>{yesterdayContacts.size}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>Unique numbers</div>
+                        </div>
+                    );
+                })()}
 
                 {/* Total Contacts Card */}
                 <div className="glass-card" style={{ padding: '20px', textAlign: 'center' }}>
@@ -339,16 +388,33 @@ const CallLogsPage = () => {
                                         </div>
 
                                         {/* Stats */}
-                                        <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                                             <div style={{ textAlign: 'center' }}>
                                                 <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '2px' }}>Total Calls</div>
                                                 <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#38bdf8' }}>{totalCalls}</div>
                                             </div>
 
                                             <div style={{ textAlign: 'center' }}>
-                                                <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '2px' }}>Last Call</div>
+                                                <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '2px' }}>Last Call Date</div>
                                                 <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
                                                     {new Date(log.timestamp).toLocaleDateString()}
+                                                </div>
+                                            </div>
+
+                                            <div style={{ textAlign: 'center' }}>
+                                                <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '2px' }}>Last Call Time</div>
+                                                <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#38bdf8' }}>
+                                                    {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </div>
+                                            </div>
+
+                                            <div style={{ textAlign: 'center' }}>
+                                                <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '2px' }}>Duration</div>
+                                                <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#10b981' }}>
+                                                    {parseInt(log.duration) >= 60
+                                                        ? `${Math.floor(parseInt(log.duration) / 60)}m ${parseInt(log.duration) % 60}s`
+                                                        : `${log.duration}s`
+                                                    }
                                                 </div>
                                             </div>
 
