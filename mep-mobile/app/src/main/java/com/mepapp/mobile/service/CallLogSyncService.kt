@@ -239,6 +239,8 @@ class CallLogSyncService : Service() {
             val unsyncedLogs = callLogDao.getUnsyncedCallLogs()
 
             if (unsyncedLogs.isEmpty()) {
+                // Still update last sync time to show service is active
+                authRepository.updateLastSyncTime()
                 return
             }
 
@@ -288,6 +290,9 @@ class CallLogSyncService : Service() {
                 callLogDao.markAsSynced(successIds)
                 Log.d(TAG, "Marked ${successIds.size} logs as synced")
                 updateNotification("Synced $successCount/${unsyncedLogs.size} calls")
+
+                // Update last sync time for UI status indicator
+                authRepository.updateLastSyncTime()
             } else {
                 Log.w(TAG, "No calls were synced successfully!")
                 updateNotification("Sync failed - ${unsyncedLogs.size} pending")

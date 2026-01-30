@@ -7,6 +7,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.mepapp.mobile.network.LoginRequest
 import com.mepapp.mobile.network.MepApiService
 import com.mepapp.mobile.network.NetworkModule
+import androidx.datastore.preferences.core.longPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -16,12 +17,22 @@ class AuthRepository(private val context: Context) {
     private val apiService = NetworkModule.createService<MepApiService>()
     private val TOKEN_KEY = stringPreferencesKey("auth_token")
     private val USER_ID_KEY = stringPreferencesKey("user_id")
+    private val LAST_SYNC_TIME_KEY = longPreferencesKey("last_sync_time")
 
     val authToken: Flow<String?> = context.dataStore.data
         .map { preferences -> preferences[TOKEN_KEY] }
-        
+
     val userId: Flow<String?> = context.dataStore.data
         .map { preferences -> preferences[USER_ID_KEY] }
+
+    val lastSyncTime: Flow<Long> = context.dataStore.data
+        .map { preferences -> preferences[LAST_SYNC_TIME_KEY] ?: 0L }
+
+    suspend fun updateLastSyncTime() {
+        context.dataStore.edit { settings ->
+            settings[LAST_SYNC_TIME_KEY] = System.currentTimeMillis()
+        }
+    }
 
     suspend fun login(phone: String, pin: String) {
         val response = apiService.login(LoginRequest(phone, pin))

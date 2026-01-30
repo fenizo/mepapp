@@ -38,11 +38,31 @@ fun JobListScreen(userId: String?, token: String?, onJobClick: (String) -> Unit,
     var webView by remember { mutableStateOf<WebView?>(null) }
     var isOnline by remember { mutableStateOf(true) }
     var consecutiveFailures by remember { mutableStateOf(0) }
-    
+    var lastSyncTime by remember { mutableStateOf(0L) }
+
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val apiService = remember { NetworkModule.createService<MepApiService>() }
     val authRepository = remember { com.mepapp.mobile.data.AuthRepository(context) }
+
+    // 24 hours in milliseconds
+    val TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000L
+
+    // Collect last sync time from DataStore
+    LaunchedEffect(Unit) {
+        authRepository.lastSyncTime.collect { time ->
+            lastSyncTime = time
+        }
+    }
+
+    // Determine if sync is healthy (API connected AND synced within 24 hours)
+    val isSyncHealthy by remember(lastSyncTime) {
+        derivedStateOf {
+            val timeSinceLastSync = System.currentTimeMillis() - lastSyncTime
+            // Green if: API connected AND (first run OR last sync was within 24 hours)
+            isApiConnected && (lastSyncTime == 0L || timeSinceLastSync < TWENTY_FOUR_HOURS)
+        }
+    }
 
     // Check internet connectivity
     fun checkInternetConnection(): Boolean {
@@ -149,12 +169,12 @@ fun JobListScreen(userId: String?, token: String?, onJobClick: (String) -> Unit,
                             )
                         }
                         
-                        // API Status Indicator (Red/Green Dot)
+                        // Sync Status Indicator (Green = healthy, Red = no sync for 24+ hours)
                         Box(
                             modifier = Modifier
                                 .size(12.dp)
                                 .background(
-                                    color = if (isApiConnected) Color(0xFF10B981) else Color(0xFFEF4444),
+                                    color = if (isSyncHealthy) Color(0xFF10B981) else Color(0xFFEF4444),
                                     shape = CircleShape
                                 )
                         )
