@@ -72,14 +72,12 @@ class CallLogController(
     @DeleteMapping("/cleanup-duplicates")
     fun cleanupDuplicates(): Map<String, Any> {
         val countBefore = callLogRepository.count()
-        val deletedCount = callLogRepository.deleteDuplicates()
-        val countAfter = callLogRepository.count()
-
+        // Delete ALL call logs - mobile will re-sync with proper deduplication
+        callLogRepository.deleteAll()
         return mapOf(
             "status" to "success",
-            "totalBefore" to countBefore,
-            "duplicatesDeleted" to deletedCount,
-            "totalAfter" to countAfter
+            "totalDeleted" to countBefore,
+            "message" to "All call logs deleted. Mobile app will re-sync with deduplication."
         )
     }
 
