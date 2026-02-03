@@ -1,0 +1,32 @@
+name: Check Nginx Config
+on:
+  workflow_dispatch:
+jobs:
+  check-nginx:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check Nginx Configuration
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: root
+        password: ${{ secrets.ROOT_PASSWORD }}
+        script: |
+          echo "=== Nginx sites-enabled ==="
+          ls -la /etc/nginx/sites-enabled/
+
+          echo ""
+          echo "=== Staging config ==="
+          cat /etc/nginx/sites-enabled/staging-web 2>/dev/null || echo "staging-web not found"
+
+          echo ""
+          echo "=== Check for staging.maduraielectriciansandplumbers.com in all configs ==="
+          grep -r "staging.maduraielectriciansandplumbers.com" /etc/nginx/ 2>/dev/null | head -20
+
+          echo ""
+          echo "=== Test Nginx config ==="
+          nginx -t
+
+          echo ""
+          echo "=== Test curl to staging internally ==="
+          curl -s http://127.0.0.1:3006/api/call-logs?page=0\&size=1 | head -c 100
