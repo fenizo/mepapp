@@ -1,10 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     async rewrites() {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://call.maduraielectriciansandplumbers.com';
         return [
             {
                 source: '/api/:path*',
-                destination: 'http://72.62.193.110:8085/api/:path*',
+                destination: `${apiUrl}/api/:path*`,
             },
         ];
     },

@@ -1,7 +1,7 @@
-name: Deploy Web Admin
+name: Deploy Web Admin (Staging)
 on:
   push:
-    branches: [ master ]
+    branches: [ staging ]
   workflow_dispatch:
 jobs:
   build-and-deploy:
@@ -12,13 +12,13 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: '18'
-    - name: Build Next.js (Production)
+    - name: Build Next.js (Staging)
       run: |
         cd mep-web
         npm install
-        NEXT_PUBLIC_API_URL=https://call.maduraielectriciansandplumbers.com npm run build
+        NEXT_PUBLIC_API_URL=https://staging-api.maduraielectriciansandplumbers.com npm run build
       env:
-        NEXT_PUBLIC_API_URL: https://call.maduraielectriciansandplumbers.com
+        NEXT_PUBLIC_API_URL: https://staging-api.maduraielectriciansandplumbers.com
     - name: Deploy to Server
       uses: appleboy/scp-action@master
       with:
@@ -26,8 +26,8 @@ jobs:
         username: ${{ secrets.WEB_SERVER_USER }}
         password: ${{ secrets.WEB_SERVER_PASSWORD }}
         source: "mep-web/.next,mep-web/public,mep-web/package.json,mep-web/next.config.js"
-        target: "~/apps/mep-web"
-    - name: Restart Web App
+        target: "~/apps/mep-web-staging"
+    - name: Restart Web App (Staging)
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.SERVER_IP }}
@@ -38,17 +38,17 @@ jobs:
           for f in /etc/profile ~/.profile ~/.bash_profile ~/.bashrc; do
             [ -f "$f" ] && . "$f" && echo "Sourced $f"
           done
-          
+
           export PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
-          
+
           # Load NVM
           export NVM_DIR="$HOME/.nvm"
           [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-          
+
           # Find Binaries
           NPM_BIN=$(command -v npm || which npm || find /usr/local/bin /usr/bin $HOME/.nvm -name npm -type f 2>/dev/null | head -n 1 || echo "npm")
           PM2_BIN=$(command -v pm2 || which pm2 || find /usr/local/bin /usr/bin $HOME/.nvm -name pm2 -type f 2>/dev/null | head -n 1)
-          
+
           if [ -z "$PM2_BIN" ] && command -v npx >/dev/null; then
             echo "PM2 not found. Will attempt to use npx pm2."
             PM2_BIN="npx pm2"
@@ -56,11 +56,11 @@ jobs:
             echo "PM2 not found and npx not available. Fallback to 'pm2'."
             PM2_BIN="pm2"
           fi
-          
+
           echo "Using NPM: $NPM_BIN"
           echo "Using PM2: $PM2_BIN"
-          
-          cd ~/apps/mep-web/mep-web
+
+          cd ~/apps/mep-web-staging/mep-web
           $NPM_BIN install --production
-          $PM2_BIN delete mep-web || true
-          $PM2_BIN start $NPM_BIN --name "mep-web" -- start -- -p 3005
+          $PM2_BIN delete mep-web-staging || true
+          $PM2_BIN start $NPM_BIN --name "mep-web-staging" -- start -- -p 3006

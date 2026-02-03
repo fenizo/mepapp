@@ -1,0 +1,86 @@
+name: Deploy Backend (Staging)
+on:
+  push:
+    branches: [ staging ]
+  workflow_dispatch:
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+    - name: Build with Maven
+      run: mvn -f mep-backend/pom.xml clean package -DskipTests -X
+    - name: Deploy to Server
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.BACKEND_SERVER_USER }}
+        password: ${{ secrets.BACKEND_SERVER_PASSWORD }}
+        source: "mep-backend/target/*.jar"
+        target: "~/apps/mep-backend-staging/staging"
+        strip_components: 2
+
+    - name: Restart Backend Service (Staging)
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.BACKEND_SERVER_USER }}
+        password: ${{ secrets.BACKEND_SERVER_PASSWORD }}
+        script: |
+          # 1. Setup Directories
+          APP_HOME="$HOME/apps/mep-backend-staging"
+          mkdir -p $APP_HOME/java
+          mkdir -p $APP_HOME/staging
+          mkdir -p $APP_HOME/data
+
+          # 2. Setup Java (Portable)
+          if [ ! -f $APP_HOME/java/jdk-17/bin/java ]; then
+            echo "Downloading Portable OpenJDK 17..."
+            curl -L https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.13%2B11/OpenJDK17U-jdk_x64_linux_hotspot_17.0.13_11.tar.gz -o $APP_HOME/java/jdk.tar.gz
+            tar -xzf $APP_HOME/java/jdk.tar.gz -C $APP_HOME/java/
+            mv $APP_HOME/java/jdk-17* $APP_HOME/java/jdk-17
+            rm $APP_HOME/java/jdk.tar.gz
+          fi
+          JAVA_BIN="$APP_HOME/java/jdk-17/bin/java"
+
+          # 3. Update JAR
+          mv $APP_HOME/staging/*.jar $APP_HOME/server.jar
+
+          if [ ! -f "$APP_HOME/server.jar" ]; then
+            echo "Error: server.jar not found at $APP_HOME/server.jar"
+            exit 1
+          fi
+
+          # 4. Stop Existing Process (port 8086 for staging)
+          fuser -k 8086/tcp || true
+
+          # 5. Start New Process with staging database
+          cd "$APP_HOME"
+          rm -f app.log
+          echo "Starting new staging backend..."
+          nohup "$JAVA_BIN" -jar server.jar \
+            --server.port=8086 \
+            --spring.datasource.url=jdbc:h2:file:./data/mepdb-staging \
+            > app.log 2>&1 &
+
+          # Wait for process to initialize
+          echo "Waiting for staging backend to start..."
+          sleep 15
+
+          # Verify process is running
+          echo "Checking process status:"
+          ps -ef | grep java | grep -v grep
+
+          # Check log for immediate errors
+          echo "Initial Log Output:"
+          [ -f app.log ] && head -n 50 app.log || echo "app.log not found"
+
+          # Check if port is listening
+          echo "Port Check:"
+          netstat -tulpn | grep 8086 || echo "Port 8086 NOT listening"
