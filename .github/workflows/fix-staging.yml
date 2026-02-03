@@ -25,13 +25,23 @@ jobs:
           ls -la /home/mep-web/apps/ 2>/dev/null || echo "No /home/mep-web/apps/"
 
           echo ""
-          echo "=== Starting staging web if exists ==="
-          # Try to find and start the staging web
-          if [ -d "/home/mep-web/apps/mep-web-staging/mep-web" ]; then
-            cd /home/mep-web/apps/mep-web-staging/mep-web
-            su - mep-web -c "cd ~/apps/mep-web-staging/mep-web && pm2 delete mep-web-staging 2>/dev/null || true && pm2 start npm --name mep-web-staging -- start -- -p 3006"
+          echo "=== Starting staging web ==="
+          # Start the staging web from the correct location
+          STAGING_WEB_DIR="/home/maduraielectr-staging/apps/mep-web-staging/mep-web"
+          if [ -d "$STAGING_WEB_DIR" ]; then
+            cd "$STAGING_WEB_DIR"
+            # Kill any existing process on port 3006
+            fuser -k 3006/tcp 2>/dev/null || true
+            sleep 2
+            # Install dependencies and start
+            export NVM_DIR="/home/maduraielectr-staging/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+            npm install --production 2>/dev/null || true
+            nohup npm start -- -p 3006 > /tmp/staging-web.log 2>&1 &
+            sleep 5
+            echo "Staging web started"
           else
-            echo "Staging web directory not found at expected location"
+            echo "Staging web directory not found: $STAGING_WEB_DIR"
           fi
 
           echo ""
