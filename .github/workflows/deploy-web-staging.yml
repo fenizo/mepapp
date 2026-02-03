@@ -16,9 +16,9 @@ jobs:
       run: |
         cd mep-web
         npm install
-        NEXT_PUBLIC_API_URL=https://staging-api.maduraielectriciansandplumbers.com npm run build
+        NEXT_PUBLIC_API_URL=http://127.0.0.1:8086 npm run build
       env:
-        NEXT_PUBLIC_API_URL: https://staging-api.maduraielectriciansandplumbers.com
+        NEXT_PUBLIC_API_URL: http://127.0.0.1:8086
     - name: Deploy to Server
       uses: appleboy/scp-action@master
       with:
