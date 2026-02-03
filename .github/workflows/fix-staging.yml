@@ -1,0 +1,39 @@
+name: Fix Staging Setup
+on:
+  workflow_dispatch:
+jobs:
+  fix-staging:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Fix Staging Environment
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: root
+        password: ${{ secrets.ROOT_PASSWORD }}
+        script: |
+          echo "=== Opening firewall for staging ports ==="
+          ufw allow 8086/tcp || iptables -A INPUT -p tcp --dport 8086 -j ACCEPT || echo "Firewall config skipped"
+          ufw allow 3006/tcp || iptables -A INPUT -p tcp --dport 3006 -j ACCEPT || echo "Firewall config skipped"
+
+          echo ""
+          echo "=== Setting up staging web ==="
+          # Find where the staging web was deployed
+          find /home -name "mep-web-staging" -type d 2>/dev/null | head -5
+
+          # Check mep-web user's home
+          ls -la /home/mep-web/apps/ 2>/dev/null || echo "No /home/mep-web/apps/"
+
+          echo ""
+          echo "=== Starting staging web if exists ==="
+          # Try to find and start the staging web
+          if [ -d "/home/mep-web/apps/mep-web-staging/mep-web" ]; then
+            cd /home/mep-web/apps/mep-web-staging/mep-web
+            su - mep-web -c "cd ~/apps/mep-web-staging/mep-web && pm2 delete mep-web-staging 2>/dev/null || true && pm2 start npm --name mep-web-staging -- start -- -p 3006"
+          else
+            echo "Staging web directory not found at expected location"
+          fi
+
+          echo ""
+          echo "=== Final port check ==="
+          netstat -tlpn | grep -E "8085|8086|3005|3006"
