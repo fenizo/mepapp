@@ -1,0 +1,32 @@
+name: Check Server Status
+on:
+  workflow_dispatch:
+jobs:
+  check-status:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check Server Status
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: root
+        password: ${{ secrets.ROOT_PASSWORD }}
+        script: |
+          echo "=== Checking running processes ==="
+          ps aux | grep java | grep -v grep
+
+          echo ""
+          echo "=== Checking ports ==="
+          netstat -tlpn | grep -E "8085|8086|3005|3006"
+
+          echo ""
+          echo "=== PM2 processes ==="
+          pm2 list 2>/dev/null || echo "PM2 not running as root"
+
+          echo ""
+          echo "=== Check staging backend directory ==="
+          ls -la ~/apps/mep-backend-staging/ 2>/dev/null || echo "Staging backend directory not found"
+
+          echo ""
+          echo "=== Check staging web directory ==="
+          ls -la ~/apps/mep-web-staging/ 2>/dev/null || echo "Staging web directory not found"
