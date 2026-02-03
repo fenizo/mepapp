@@ -1,0 +1,70 @@
+name: Setup Nginx for Staging
+on:
+  workflow_dispatch:
+jobs:
+  setup-nginx:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Configure Nginx for Staging
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.WEB_SERVER_USER }}
+        password: ${{ secrets.WEB_SERVER_PASSWORD }}
+        script: |
+          # Create Nginx config for staging-api
+          sudo tee /etc/nginx/sites-available/staging-api << 'EOF'
+          server {
+              listen 80;
+              server_name staging-api.maduraielectriciansandplumbers.com;
+
+              location / {
+                  proxy_pass http://127.0.0.1:8086;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection 'upgrade';
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_cache_bypass $http_upgrade;
+              }
+          }
+          EOF
+
+          # Create Nginx config for staging web
+          sudo tee /etc/nginx/sites-available/staging-web << 'EOF'
+          server {
+              listen 80;
+              server_name staging.maduraielectriciansandplumbers.com;
+
+              location / {
+                  proxy_pass http://127.0.0.1:3006;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection 'upgrade';
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_cache_bypass $http_upgrade;
+              }
+          }
+          EOF
+
+          # Enable the sites
+          sudo ln -sf /etc/nginx/sites-available/staging-api /etc/nginx/sites-enabled/
+          sudo ln -sf /etc/nginx/sites-available/staging-web /etc/nginx/sites-enabled/
+
+          # Test and reload Nginx
+          sudo nginx -t && sudo systemctl reload nginx
+
+          echo "Nginx configured for staging!"
+
+          # Setup SSL with certbot (if available)
+          if command -v certbot &> /dev/null; then
+            echo "Setting up SSL..."
+            sudo certbot --nginx -d staging-api.maduraielectriciansandplumbers.com -d staging.maduraielectriciansandplumbers.com --non-interactive --agree-tos --email admin@maduraielectriciansandplumbers.com || echo "SSL setup failed - you may need to set up DNS first"
+          else
+            echo "Certbot not installed - skipping SSL setup"
+          fi
