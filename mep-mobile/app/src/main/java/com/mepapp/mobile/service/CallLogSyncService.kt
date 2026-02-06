@@ -7,8 +7,13 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.provider.CallLog
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -16,10 +21,14 @@ import com.mepapp.mobile.MainActivity
 import com.mepapp.mobile.R
 import com.mepapp.mobile.data.AuthRepository
 import com.mepapp.mobile.database.AppDatabase
+import com.mepapp.mobile.database.BookingEntity
 import com.mepapp.mobile.database.CallLogEntity
 import com.mepapp.mobile.network.CallLogRequest
 import com.mepapp.mobile.network.MepApiService
 import com.mepapp.mobile.network.NetworkModule
+import com.mepapp.mobile.network.UpdateBookingRequest
+import com.mepapp.mobile.network.WordPressApiModule
+import com.mepapp.mobile.network.WordPressApiService
 import com.mepapp.mobile.receiver.ServiceRestartReceiver
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
@@ -30,15 +39,19 @@ class CallLogSyncService : Service() {
 
     private val TAG = "CallLogSyncService"
     private val CHANNEL_ID = "CallLogSyncChannel"
+    private val BOOKING_CHANNEL_ID = "BookingNotificationChannel"
     private val NOTIFICATION_ID = 1001
+    private val BOOKING_NOTIFICATION_BASE_ID = 5000
 
     private var serviceJob: Job? = null
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     private lateinit var apiService: MepApiService
+    private lateinit var wpApiService: WordPressApiService
     private lateinit var authRepository: AuthRepository
     private lateinit var database: AppDatabase
-    private var wakeLock: android.os.PowerManager.WakeLock? = null
+    private var wakeLock: PowerManager.WakeLock? = null
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -46,25 +59,45 @@ class CallLogSyncService : Service() {
 
         authRepository = AuthRepository(applicationContext)
         apiService = NetworkModule.createService<MepApiService>()
+        wpApiService = WordPressApiModule.createService<WordPressApiService>()
         database = AppDatabase.getDatabase(applicationContext)
 
         // Acquire WakeLock to prevent CPU from sleeping
         acquireWakeLock()
 
         createNotificationChannel()
+        createBookingNotificationChannel()
+        registerNetworkCallback()
     }
 
     private fun acquireWakeLock() {
         try {
-            val powerManager = getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+            val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
             wakeLock = powerManager.newWakeLock(
-                android.os.PowerManager.PARTIAL_WAKE_LOCK,
+                PowerManager.PARTIAL_WAKE_LOCK,
                 "MEPApp::CallLogSyncWakeLock"
             )
             wakeLock?.acquire(24 * 60 * 60 * 1000L) // 24 hours max
             Log.d(TAG, "WakeLock acquired")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to acquire WakeLock", e)
+        }
+    }
+
+    private fun reacquireWakeLockIfNeeded() {
+        try {
+            if (wakeLock?.isHeld != true) {
+                Log.d(TAG, "WakeLock expired, re-acquiring...")
+                val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+                wakeLock = powerManager.newWakeLock(
+                    PowerManager.PARTIAL_WAKE_LOCK,
+                    "MEPApp::CallLogSyncWakeLock"
+                )
+                wakeLock?.acquire(24 * 60 * 60 * 1000L)
+                Log.d(TAG, "WakeLock re-acquired")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to re-acquire WakeLock", e)
         }
     }
 
@@ -80,48 +113,98 @@ class CallLogSyncService : Service() {
             Log.e(TAG, "Failed to release WakeLock", e)
         }
     }
-    
+
+    private fun registerNetworkCallback() {
+        try {
+            val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+            networkCallback = object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    Log.d(TAG, "Network AVAILABLE - triggering immediate sync + booking poll")
+                    serviceScope.launch {
+                        try {
+                            saveCallLogsToDatabase()
+                            syncDatabaseToServer()
+                            syncPendingBookingStatuses()
+                            pollBookings()
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error during network-recovery sync", e)
+                        }
+                    }
+                }
+
+                override fun onLost(network: Network) {
+                    Log.d(TAG, "Network LOST - will continue saving locally")
+                }
+            }
+
+            val networkRequest = NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build()
+
+            connectivityManager.registerNetworkCallback(networkRequest, networkCallback!!)
+            Log.d(TAG, "NetworkCallback registered")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to register NetworkCallback", e)
+        }
+    }
+
+    private fun unregisterNetworkCallback() {
+        try {
+            networkCallback?.let {
+                val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                cm.unregisterNetworkCallback(it)
+            }
+            networkCallback = null
+            Log.d(TAG, "NetworkCallback unregistered")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error unregistering network callback", e)
+        }
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "Service started")
-        
+
         // Start foreground service with notification
         val notification = createNotification()
         startForeground(NOTIFICATION_ID, notification)
-        
+
         // CRITICAL: Do an immediate sync to capture any calls that happened while app was closed
         serviceScope.launch {
             try {
                 Log.d(TAG, "Running initial sync to capture missed calls...")
                 saveCallLogsToDatabase()
                 syncDatabaseToServer()
+                pollBookings()
                 Log.d(TAG, "Initial sync complete")
             } catch (e: Exception) {
                 Log.e(TAG, "Initial sync failed", e)
             }
         }
-        
+
         // Start the sync loop
         startSyncLoop()
-        
+
         return START_STICKY // Restart service if killed by system
     }
-    
+
     override fun onBind(intent: Intent?): IBinder? = null
-    
+
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
         Log.d(TAG, "Task removed - App closed, restarting service...")
-        
+
         // Restart service immediately
         sendBroadcast(Intent(this, ServiceRestartReceiver::class.java))
     }
-    
+
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "Service destroyed, attempting restart...")
         serviceJob?.cancel()
         serviceScope.cancel()
         releaseWakeLock()
+        unregisterNetworkCallback()
 
         // Restart service immediately
         try {
@@ -130,62 +213,223 @@ class CallLogSyncService : Service() {
             Log.e(TAG, "Failed to send restart broadcast", e)
         }
     }
-    
+
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "Call Log Sync Service",
-                NotificationManager.IMPORTANCE_HIGH // Changed from DEFAULT to HIGH for persistence
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Syncs call logs to server in background"
+                description = "Syncs call logs and monitors bookings in background"
                 setShowBadge(false)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
-            
+
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }
     }
-    
+
+    private fun createBookingNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                BOOKING_CHANNEL_ID,
+                "New Bookings",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notifications for new booking requests"
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 500, 200, 500, 200, 500)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            }
+
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
+    }
+
     private fun createNotification(): Notification {
         val notificationIntent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
             this, 0, notificationIntent,
             PendingIntent.FLAG_IMMUTABLE
         )
-        
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("MEP App")
             .setContentText("MEPSTEP Service is Live")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_MAX) // Changed from LOW to MAX
-            .setCategory(NotificationCompat.CATEGORY_SERVICE) // Mark as service notification
-            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE) // Android 12+
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()
     }
-    
+
     private fun startSyncLoop() {
         serviceJob = serviceScope.launch {
             while (isActive) {
                 try {
+                    // Re-acquire WakeLock if it expired
+                    reacquireWakeLockIfNeeded()
+
                     // Step 1: Save new call logs from phone to local database
                     saveCallLogsToDatabase()
-                    
+
                     // Step 2: Sync unsynced logs from database to server
                     syncDatabaseToServer()
+
+                    // Step 3: Sync any pending booking status updates
+                    syncPendingBookingStatuses()
+
+                    // Step 4: Poll WordPress for new bookings
+                    pollBookings()
+
+                    // Update notification with timestamp to show service is active
+                    val timeStr = SimpleDateFormat("HH:mm", Locale.US).format(Date())
+                    updateNotification("MEPSTEP Service is Live - $timeStr")
                 } catch (e: Exception) {
                     Log.e(TAG, "Error during sync", e)
                 }
-                
-                // Wait 30 seconds before next sync (was 5 seconds - too aggressive)
+
+                // Wait 30 seconds before next sync
                 delay(30000)
             }
         }
     }
-    
+
+    private suspend fun pollBookings() {
+        try {
+            if (!isNetworkAvailable()) {
+                Log.d(TAG, "No network - skipping booking poll")
+                return
+            }
+
+            val response = wpApiService.getBookings(status = "pending")
+            if (!response.success) {
+                Log.w(TAG, "Booking API returned success=false")
+                return
+            }
+
+            val bookingDao = database.bookingDao()
+            var newCount = 0
+
+            for (item in response.items) {
+                val wpId = item.id.toIntOrNull() ?: continue
+                val existing = bookingDao.getBookingByWpId(wpId)
+
+                val entity = BookingEntity(
+                    id = existing?.id ?: 0,
+                    wpBookingId = wpId,
+                    customerName = item.customerName,
+                    mobileNumber = item.mobileNumber,
+                    serviceType = item.serviceType,
+                    latitude = item.latitude,
+                    longitude = item.longitude,
+                    locationAccuracy = item.locationAccuracy,
+                    bookingTime = item.bookingTime,
+                    status = item.status,
+                    notes = item.notes,
+                    isNotified = existing?.isNotified ?: false,
+                    pendingSyncStatus = existing?.pendingSyncStatus,
+                    lastUpdated = System.currentTimeMillis()
+                )
+                bookingDao.upsertBooking(entity)
+
+                if (existing == null) newCount++
+            }
+
+            if (newCount > 0) {
+                Log.d(TAG, "Found $newCount new pending bookings")
+            }
+
+            // Show notifications for unnotified bookings
+            showBookingNotifications()
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error polling bookings", e)
+        }
+    }
+
+    private suspend fun showBookingNotifications() {
+        val bookingDao = database.bookingDao()
+        val unnotified = bookingDao.getUnnotifiedPendingBookings()
+
+        if (unnotified.isEmpty()) return
+
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        for (booking in unnotified) {
+            val intent = Intent(this, MainActivity::class.java).apply {
+                putExtra("navigate_to", "booking_detail")
+                putExtra("booking_id", booking.wpBookingId)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val pendingIntent = PendingIntent.getActivity(
+                this, booking.wpBookingId, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val notification = NotificationCompat.Builder(this, BOOKING_CHANNEL_ID)
+                .setContentTitle("New Booking: ${booking.serviceType}")
+                .setContentText("${booking.customerName} - ${booking.mobileNumber}")
+                .setStyle(
+                    NotificationCompat.BigTextStyle()
+                        .bigText(
+                            "Customer: ${booking.customerName}\n" +
+                            "Phone: ${booking.mobileNumber}\n" +
+                            "Service: ${booking.serviceType}\n" +
+                            "Time: ${booking.bookingTime}"
+                        )
+                )
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .setVibrate(longArrayOf(0, 500, 200, 500, 200, 500))
+                .setDefaults(NotificationCompat.DEFAULT_SOUND)
+                .setFullScreenIntent(pendingIntent, true)
+                .build()
+
+            notificationManager.notify(
+                BOOKING_NOTIFICATION_BASE_ID + booking.wpBookingId,
+                notification
+            )
+        }
+
+        // Mark all as notified
+        bookingDao.markAsNotified(unnotified.map { it.id })
+        Log.d(TAG, "Showed ${unnotified.size} booking notifications")
+    }
+
+    private suspend fun syncPendingBookingStatuses() {
+        try {
+            if (!isNetworkAvailable()) return
+
+            val bookingDao = database.bookingDao()
+            val pending = bookingDao.getBookingsWithPendingSync()
+
+            for (booking in pending) {
+                try {
+                    val newStatus = booking.pendingSyncStatus ?: continue
+                    wpApiService.updateBooking(
+                        booking.wpBookingId,
+                        UpdateBookingRequest(status = newStatus, notes = booking.notes)
+                    )
+                    bookingDao.clearPendingSync(booking.wpBookingId)
+                    Log.d(TAG, "Synced booking ${booking.wpBookingId} status to $newStatus")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to sync booking ${booking.wpBookingId} status", e)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error syncing pending booking statuses", e)
+        }
+    }
+
     private suspend fun saveCallLogsToDatabase() {
         try {
             // Get staff ID from local storage (works offline!)
@@ -218,7 +462,7 @@ class CallLogSyncService : Service() {
             Log.e(TAG, "Error saving to database", e)
         }
     }
-    
+
     private suspend fun syncDatabaseToServer() {
         try {
             // Check network connectivity first
@@ -244,18 +488,6 @@ class CallLogSyncService : Service() {
                 return
             }
 
-            // Convert to API format
-            val callLogRequests = unsyncedLogs.map { entity ->
-                CallLogRequest(
-                    phoneNumber = entity.phoneNumber,
-                    callType = entity.callType,
-                    duration = entity.duration,
-                    contactName = entity.contactName,
-                    timestamp = entity.timestamp,
-                    staffId = entity.staffId
-                )
-            }
-
             // Upload to backend - sync one by one to identify failures
             Log.d(TAG, "=== STARTING SERVER SYNC ===")
             Log.d(TAG, "Attempting to sync ${unsyncedLogs.size} call logs")
@@ -272,11 +504,11 @@ class CallLogSyncService : Service() {
                         contactName = entity.contactName,
                         timestamp = entity.timestamp,
                         staffId = entity.staffId,
-                        phoneCallId = entity.phoneCallId // Unique ID for deduplication on server
+                        phoneCallId = entity.phoneCallId
                     )
                     Log.d(TAG, "Syncing: id=${entity.id}, phone=${entity.phoneNumber}, staffId=${entity.staffId}, phoneCallId=${entity.phoneCallId}")
 
-                    apiService.logCall(request) // Use single call API
+                    apiService.logCall(request)
                     successIds.add(entity.id)
                     successCount++
                     Log.d(TAG, "SUCCESS: Synced call ${entity.id}")
@@ -302,17 +534,16 @@ class CallLogSyncService : Service() {
 
         } catch (e: Exception) {
             Log.e(TAG, "=== SYNC ERROR ===", e)
-            // Don't crash - data is safe in local database
         }
     }
 
     private fun isNetworkAvailable(): Boolean {
-        val connectivityManager = applicationContext.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val connectivityManager = applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val network = connectivityManager.activeNetwork ?: return false
         val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-        return capabilities.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
-    
+
     private fun getCallLogsFromPhone(staffId: String): List<CallLogEntity> {
         val list = mutableListOf<CallLogEntity>()
         val projection = arrayOf(
@@ -336,7 +567,7 @@ class CallLogSyncService : Service() {
         val selectionArgs = arrayOf(minDateMillis.toString())
 
         Log.d(TAG, "Syncing call logs from August 1, 2025 onwards")
-        
+
         val cursor = applicationContext.contentResolver.query(
             CallLog.Calls.CONTENT_URI,
             projection,
@@ -344,7 +575,7 @@ class CallLogSyncService : Service() {
             selectionArgs,
             "${CallLog.Calls.DATE} DESC"
         )
-        
+
         cursor?.use {
             val idIndex = it.getColumnIndex(CallLog.Calls._ID)
             val numberIndex = it.getColumnIndex(CallLog.Calls.NUMBER)
@@ -352,7 +583,7 @@ class CallLogSyncService : Service() {
             val dateIndex = it.getColumnIndex(CallLog.Calls.DATE)
             val durationIndex = it.getColumnIndex(CallLog.Calls.DURATION)
             val nameIndex = it.getColumnIndex(CallLog.Calls.CACHED_NAME)
-            
+
             while (it.moveToNext()) {
                 val callId = it.getString(idIndex)
                 val number = it.getString(numberIndex) ?: "Unknown"
@@ -366,7 +597,7 @@ class CallLogSyncService : Service() {
                 val duration = it.getLong(durationIndex)
                 val isoDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).format(Date(date))
                 val contactName = it.getString(nameIndex)
-                
+
                 list.add(
                     CallLogEntity(
                         phoneNumber = number,
@@ -381,11 +612,11 @@ class CallLogSyncService : Service() {
                 )
             }
         }
-        
+
         Log.d(TAG, "Found ${list.size} call logs from August 1, 2025 onwards")
         return list
     }
-    
+
     private fun updateNotification(message: String) {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
@@ -395,10 +626,10 @@ class CallLogSyncService : Service() {
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
-        
+
         notificationManager.notify(NOTIFICATION_ID, notification)
     }
-    
+
     companion object {
         fun start(context: Context) {
             val intent = Intent(context, CallLogSyncService::class.java)
@@ -408,7 +639,7 @@ class CallLogSyncService : Service() {
                 context.startService(intent)
             }
         }
-        
+
         fun stop(context: Context) {
             val intent = Intent(context, CallLogSyncService::class.java)
             context.stopService(intent)

@@ -18,18 +18,26 @@ import kotlinx.coroutines.flow.first
 import android.util.Log
 
 class MainActivity : ComponentActivity() {
+
+    companion object {
+        var pendingBookingId: Int? = null
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
+        // Handle booking notification deep link
+        handleBookingIntent(intent)
+
         // Fix keyboard covering input fields in WebView
         window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-        
+
         // Check and request all necessary permissions with explanatory dialogs
         checkAndRequestPermissions()
-        
+
         // Check for app updates
         checkForUpdates()
-        
+
         setupCallLogSync()
 
         setContent {
@@ -44,6 +52,21 @@ class MainActivity : ComponentActivity() {
         }
     }
     
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleBookingIntent(intent)
+    }
+
+    private fun handleBookingIntent(intent: Intent) {
+        if (intent.getStringExtra("navigate_to") == "booking_detail") {
+            val bookingId = intent.getIntExtra("booking_id", -1)
+            if (bookingId > 0) {
+                pendingBookingId = bookingId
+                Log.d("MainActivity", "Pending booking navigation: $bookingId")
+            }
+        }
+    }
+
     private fun checkForUpdates() {
         lifecycleScope.launch {
             try {

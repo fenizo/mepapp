@@ -31,7 +31,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun JobListScreen(userId: String?, token: String?, onJobClick: (String) -> Unit, onLogsClick: () -> Unit) {
+fun JobListScreen(userId: String?, token: String?, onJobClick: (String) -> Unit, onLogsClick: () -> Unit, onBookingsClick: () -> Unit) {
     var isApiConnected by remember { mutableStateOf(false) }
     var nextSyncIn by remember { mutableStateOf(5) }
     var isCheckingApi by remember { mutableStateOf(false) }
@@ -140,6 +140,19 @@ fun JobListScreen(userId: String?, token: String?, onJobClick: (String) -> Unit,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.padding(end = 12.dp)
                     ) {
+                        // Bookings Button
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFF1E293B),
+                            onClick = onBookingsClick
+                        ) {
+                            Text(
+                                text = "\uD83D\uDCC5",
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                fontSize = 16.sp
+                            )
+                        }
+
                         // Call Logs Button
                         Surface(
                             shape = RoundedCornerShape(8.dp),

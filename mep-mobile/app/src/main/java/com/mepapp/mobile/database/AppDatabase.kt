@@ -5,9 +5,10 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [CallLogEntity::class], version = 2, exportSchema = false)
+@Database(entities = [CallLogEntity::class, BookingEntity::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun callLogDao(): CallLogDao
+    abstract fun bookingDao(): BookingDao
 
     companion object {
         @Volatile

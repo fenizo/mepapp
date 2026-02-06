@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.unit.dp
+import com.mepapp.mobile.MainActivity
 
 @Composable
 fun MainNavigation() {
@@ -12,13 +13,14 @@ fun MainNavigation() {
     val authRepository = remember { com.mepapp.mobile.data.AuthRepository(context) }
     val tokenState = authRepository.authToken.collectAsState(initial = null)
     val userIdState = authRepository.userId.collectAsState(initial = null)
-    
+
     var currentScreen by remember { mutableStateOf("login") }
     var selectedJobId by remember { mutableStateOf("") }
+    var selectedBookingId by remember { mutableStateOf(-1) }
 
     // Navigation logic based on authentication
     val startScreen = if (tokenState.value != null) "list" else "login"
-    
+
     LaunchedEffect(tokenState.value) {
         if (tokenState.value != null) {
             com.mepapp.mobile.network.NetworkModule.setAuthToken(tokenState.value!!)
@@ -28,10 +30,20 @@ fun MainNavigation() {
         }
     }
 
+    // Handle deep link from booking notification
+    LaunchedEffect(Unit) {
+        val pendingId = MainActivity.pendingBookingId
+        if (pendingId != null && pendingId > 0) {
+            selectedBookingId = pendingId
+            currentScreen = "booking_detail"
+            MainActivity.pendingBookingId = null
+        }
+    }
+
     val workManager = androidx.work.WorkManager.getInstance(context)
     val workInfos = workManager.getWorkInfosForUniqueWorkLiveData("CallLogSync")
         .observeAsState(initial = emptyList())
-        
+
     val isSyncing = workInfos.value.any { it.state == androidx.work.WorkInfo.State.RUNNING }
 
     Box(modifier = androidx.compose.ui.Modifier.fillMaxSize()) {
@@ -48,6 +60,9 @@ fun MainNavigation() {
                 },
                 onLogsClick = {
                     currentScreen = "logs"
+                },
+                onBookingsClick = {
+                    currentScreen = "bookings"
                 }
             )
             "details" -> JobDetailScreen(jobId = selectedJobId, onBack = {
@@ -56,6 +71,21 @@ fun MainNavigation() {
             "logs" -> CallLogsScreen(onBack = {
                 currentScreen = "list"
             })
+            "bookings" -> BookingListScreen(
+                onBookingClick = { bookingWpId ->
+                    selectedBookingId = bookingWpId
+                    currentScreen = "booking_detail"
+                },
+                onBack = {
+                    currentScreen = "list"
+                }
+            )
+            "booking_detail" -> BookingDetailScreen(
+                bookingWpId = selectedBookingId,
+                onBack = {
+                    currentScreen = "bookings"
+                }
+            )
         }
 
         if (isSyncing) {
