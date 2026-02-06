@@ -49,7 +49,7 @@ const isExcluded = (phone: string, excludedSet: Set<string>): boolean => {
 const CallLogsPage = () => {
     const [rawLogs, setRawLogs] = useState<CallLog[]>([]);
     const [displayLogs, setDisplayLogs] = useState<CallLog[]>([]);
-    const [visibleLogs, setVisibleLogs] = useState<CallLog[]>([]);
+    const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -61,8 +61,12 @@ const CallLogsPage = () => {
     const [excludedContacts, setExcludedContacts] = useState<Set<string>>(new Set());
     const [showExcludeModal, setShowExcludeModal] = useState(false);
     const [excludeInput, setExcludeInput] = useState('');
-    const [hasMore, setHasMore] = useState(true);
     const loaderRef = useRef<HTMLDivElement>(null);
+    const prevFiltersRef = useRef({ filterMode: 'all', customDate: '', selectedStaff: 'all', excludedSize: 0 });
+
+    // Compute visible logs and hasMore from displayLogs and visibleCount
+    const visibleLogs = displayLogs.slice(0, visibleCount);
+    const hasMore = visibleCount < displayLogs.length;
 
     // Load excluded contacts from server
     const fetchExcludedContacts = () => {
@@ -190,9 +194,19 @@ const CallLogsPage = () => {
         });
 
         setDisplayLogs(deduplicated);
-        // Reset visible logs to first PAGE_SIZE items
-        setVisibleLogs(deduplicated.slice(0, PAGE_SIZE));
-        setHasMore(deduplicated.length > PAGE_SIZE);
+
+        // Check if filters changed - only reset visible count when filters change
+        const filtersChanged =
+            prevFiltersRef.current.filterMode !== filterMode ||
+            prevFiltersRef.current.customDate !== customDate ||
+            prevFiltersRef.current.selectedStaff !== selectedStaff ||
+            prevFiltersRef.current.excludedSize !== excludedContacts.size;
+
+        if (filtersChanged) {
+            setVisibleCount(PAGE_SIZE);
+            prevFiltersRef.current = { filterMode, customDate, selectedStaff, excludedSize: excludedContacts.size };
+        }
+        // hasMore is now computed automatically from visibleCount and displayLogs.length
     };
 
     // Load more logs when scrolling to end
@@ -200,15 +214,11 @@ const CallLogsPage = () => {
         if (loadingMore || !hasMore) return;
 
         setLoadingMore(true);
-        const currentLength = visibleLogs.length;
-        const nextLogs = displayLogs.slice(currentLength, currentLength + PAGE_SIZE);
-
         setTimeout(() => {
-            setVisibleLogs(prev => [...prev, ...nextLogs]);
-            setHasMore(currentLength + PAGE_SIZE < displayLogs.length);
+            setVisibleCount(prev => Math.min(prev + PAGE_SIZE, displayLogs.length));
             setLoadingMore(false);
         }, 100);
-    }, [loadingMore, hasMore, visibleLogs.length, displayLogs]);
+    }, [loadingMore, hasMore, displayLogs.length]);
 
     // Intersection Observer for infinite scroll
     useEffect(() => {
