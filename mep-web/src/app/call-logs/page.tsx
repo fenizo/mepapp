@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { apiFetch } from '../../lib/api';
 
 interface CallLog {
@@ -15,6 +15,8 @@ interface CallLog {
     duration: string;
     timestamp: string;
 }
+
+const PAGE_SIZE = 50;
 
 // Normalize phone number - remove +91 or 91 prefix to get base 10-digit number
 const normalizePhone = (phone: string): string => {
@@ -47,7 +49,9 @@ const isExcluded = (phone: string, excludedSet: Set<string>): boolean => {
 const CallLogsPage = () => {
     const [rawLogs, setRawLogs] = useState<CallLog[]>([]);
     const [displayLogs, setDisplayLogs] = useState<CallLog[]>([]);
+    const [visibleLogs, setVisibleLogs] = useState<CallLog[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     const [filterMode, setFilterMode] = useState<'today' | 'yesterday' | 'custom' | 'all'>('all');
     const [customDate, setCustomDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -57,6 +61,8 @@ const CallLogsPage = () => {
     const [excludedContacts, setExcludedContacts] = useState<Set<string>>(new Set());
     const [showExcludeModal, setShowExcludeModal] = useState(false);
     const [excludeInput, setExcludeInput] = useState('');
+    const [hasMore, setHasMore] = useState(true);
+    const loaderRef = useRef<HTMLDivElement>(null);
 
     // Load excluded contacts from server
     const fetchExcludedContacts = () => {
@@ -184,7 +190,43 @@ const CallLogsPage = () => {
         });
 
         setDisplayLogs(deduplicated);
+        // Reset visible logs to first PAGE_SIZE items
+        setVisibleLogs(deduplicated.slice(0, PAGE_SIZE));
+        setHasMore(deduplicated.length > PAGE_SIZE);
     };
+
+    // Load more logs when scrolling to end
+    const loadMore = useCallback(() => {
+        if (loadingMore || !hasMore) return;
+
+        setLoadingMore(true);
+        const currentLength = visibleLogs.length;
+        const nextLogs = displayLogs.slice(currentLength, currentLength + PAGE_SIZE);
+
+        setTimeout(() => {
+            setVisibleLogs(prev => [...prev, ...nextLogs]);
+            setHasMore(currentLength + PAGE_SIZE < displayLogs.length);
+            setLoadingMore(false);
+        }, 100);
+    }, [loadingMore, hasMore, visibleLogs.length, displayLogs]);
+
+    // Intersection Observer for infinite scroll
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !loadingMore) {
+                    loadMore();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (loaderRef.current) {
+            observer.observe(loaderRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [loadMore, hasMore, loadingMore]);
 
     const getContactLogs = (phoneNumber: string): CallLog[] => {
         const normalized = normalizePhone(phoneNumber);
@@ -521,18 +563,18 @@ const CallLogsPage = () => {
                 </div>
             </div>
 
-            {/* Contact Cards - Mobile Optimized */}
+            {/* Contact Cards - Mobile Optimized with Infinite Scroll */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {loading && displayLogs.length === 0 ? (
+                {loading && visibleLogs.length === 0 ? (
                     <div className="glass-card" style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
                         Loading...
                     </div>
-                ) : displayLogs.length === 0 ? (
+                ) : visibleLogs.length === 0 ? (
                     <div className="glass-card" style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
                         No call logs found
                     </div>
                 ) : (
-                    displayLogs.map((log) => {
+                    visibleLogs.map((log) => {
                         const contactLogs = getContactLogs(log.phoneNumber);
                         const isExpanded = expandedContact === log.phoneNumber;
                         const totalCalls = contactLogs.length;
@@ -709,6 +751,30 @@ const CallLogsPage = () => {
                             </div>
                         );
                     })
+                )}
+
+                {/* Infinite Scroll Loader */}
+                {visibleLogs.length > 0 && (
+                    <div
+                        ref={loaderRef}
+                        style={{
+                            padding: '20px',
+                            textAlign: 'center',
+                            color: '#64748b'
+                        }}
+                    >
+                        {loadingMore ? (
+                            <span>Loading more...</span>
+                        ) : hasMore ? (
+                            <span style={{ fontSize: '0.85rem' }}>
+                                Showing {visibleLogs.length} of {displayLogs.length} • Scroll for more
+                            </span>
+                        ) : (
+                            <span style={{ fontSize: '0.85rem' }}>
+                                Showing all {visibleLogs.length} contacts
+                            </span>
+                        )}
+                    </div>
                 )}
             </div>
         </div>
