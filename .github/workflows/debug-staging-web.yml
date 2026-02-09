@@ -5,52 +5,65 @@ jobs:
   debug:
     runs-on: ubuntu-latest
     steps:
-    - name: Debug File Structure
+    - uses: actions/checkout@v3
+    - name: Fix staging web - build on server
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.SERVER_IP }}
         username: ${{ secrets.WEB_SERVER_USER }}
         password: ${{ secrets.WEB_SERVER_PASSWORD }}
+        command_timeout: 10m
         script: |
-          echo "=== PM2 status ==="
           export NVM_DIR="$HOME/.nvm"
           [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-          pm2 list
+
+          NPM_BIN=$(command -v npm || which npm || echo "npm")
+          PM2_BIN=$(command -v pm2 || which pm2 || find /usr/local/bin /usr/bin $HOME/.nvm -name pm2 -type f 2>/dev/null | head -n 1)
+          if [ -z "$PM2_BIN" ]; then PM2_BIN="npx pm2"; fi
+
+          echo "=== PM2 logs (last 20 lines) ==="
+          $PM2_BIN logs mep-web-staging --lines 20 --nostream 2>/dev/null || echo "No logs"
 
           echo ""
-          echo "=== .next directory structure ==="
-          ls -la ~/apps/mep-web-staging/mep-web/.next/ 2>/dev/null || echo "NO .next directory!"
+          echo "=== Checking build-manifest.json ==="
+          cat ~/apps/mep-web-staging/mep-web/.next/app-build-manifest.json 2>/dev/null | head -50
 
           echo ""
-          echo "=== BUILD_ID ==="
-          cat ~/apps/mep-web-staging/mep-web/.next/BUILD_ID 2>/dev/null || echo "No BUILD_ID"
+          echo "=== Static build ID directory ==="
+          BUILD_ID=$(cat ~/apps/mep-web-staging/mep-web/.next/BUILD_ID 2>/dev/null)
+          echo "BUILD_ID: $BUILD_ID"
+          ls -la ~/apps/mep-web-staging/mep-web/.next/static/$BUILD_ID/ 2>/dev/null || echo "No build ID directory in static!"
 
           echo ""
-          echo "=== Static chunks app directory ==="
-          find ~/apps/mep-web-staging/mep-web/.next/static/chunks/app/ -type f 2>/dev/null || echo "No app chunks!"
+          echo "=== Rebuilding on server ==="
+          cd ~/apps/mep-web-staging/mep-web
+          $NPM_BIN install
+          NEXT_PUBLIC_API_URL=http://127.0.0.1:8086 $NPM_BIN run build 2>&1 | tail -30
 
           echo ""
-          echo "=== All chunk files ==="
-          find ~/apps/mep-web-staging/mep-web/.next/static/chunks/ -name "*.js" -type f 2>/dev/null | head -30
+          echo "=== New BUILD_ID ==="
+          cat .next/BUILD_ID
 
           echo ""
-          echo "=== Static directory structure ==="
-          find ~/apps/mep-web-staging/mep-web/.next/static/ -maxdepth 2 -type d 2>/dev/null
+          echo "=== Restarting ==="
+          $PM2_BIN delete mep-web-staging 2>/dev/null || true
+          sleep 1
+          export NEXT_PUBLIC_API_URL=http://127.0.0.1:8086
+          $PM2_BIN start $NPM_BIN --name "mep-web-staging" --update-env -- start -- -p 3006
+          sleep 5
 
           echo ""
-          echo "=== Check specific chunks ==="
-          ls -la ~/apps/mep-web-staging/mep-web/.next/static/chunks/fd9d1056-*.js 2>/dev/null || echo "No fd9d1056 chunk!"
-          ls -la ~/apps/mep-web-staging/mep-web/.next/static/chunks/69-*.js 2>/dev/null || echo "No 69 chunk!"
+          echo "=== Testing chunks locally ==="
+          curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3006/
+          echo " homepage"
+
+          # Get chunk URLs from the actual page
+          CHUNKS=$(curl -s http://127.0.0.1:3006/returning-customers | grep -o 'src="/_next/static[^"]*"' | sed 's/src="//;s/"//')
+          for chunk in $CHUNKS; do
+            status=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:3006$chunk")
+            echo "$status $chunk"
+          done
 
           echo ""
-          echo "=== Test local chunk access ==="
-          curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3006/_next/static/chunks/webpack-9117f37eb59612ae.js
-          echo " webpack chunk"
-          curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3006/_next/static/chunks/app/returning-customers/page-cd1cd3e8a0da74b0.js
-          echo " returning-customers chunk"
-
-          echo ""
-          echo "=== File permissions ==="
-          ls -la ~/apps/mep-web-staging/mep-web/.next/static/chunks/ | head -10
-          echo "---"
-          ls -la ~/apps/mep-web-staging/mep-web/.next/static/chunks/app/returning-customers/ 2>/dev/null || echo "No returning-customers dir"
+          echo "=== PM2 status ==="
+          $PM2_BIN list
