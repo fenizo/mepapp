@@ -1,0 +1,56 @@
+name: Debug Staging Web
+on:
+  workflow_dispatch:
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Debug File Structure
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.WEB_SERVER_USER }}
+        password: ${{ secrets.WEB_SERVER_PASSWORD }}
+        script: |
+          echo "=== PM2 status ==="
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          pm2 list
+
+          echo ""
+          echo "=== .next directory structure ==="
+          ls -la ~/apps/mep-web-staging/mep-web/.next/ 2>/dev/null || echo "NO .next directory!"
+
+          echo ""
+          echo "=== BUILD_ID ==="
+          cat ~/apps/mep-web-staging/mep-web/.next/BUILD_ID 2>/dev/null || echo "No BUILD_ID"
+
+          echo ""
+          echo "=== Static chunks app directory ==="
+          find ~/apps/mep-web-staging/mep-web/.next/static/chunks/app/ -type f 2>/dev/null || echo "No app chunks!"
+
+          echo ""
+          echo "=== All chunk files ==="
+          find ~/apps/mep-web-staging/mep-web/.next/static/chunks/ -name "*.js" -type f 2>/dev/null | head -30
+
+          echo ""
+          echo "=== Static directory structure ==="
+          find ~/apps/mep-web-staging/mep-web/.next/static/ -maxdepth 2 -type d 2>/dev/null
+
+          echo ""
+          echo "=== Check specific chunks ==="
+          ls -la ~/apps/mep-web-staging/mep-web/.next/static/chunks/fd9d1056-*.js 2>/dev/null || echo "No fd9d1056 chunk!"
+          ls -la ~/apps/mep-web-staging/mep-web/.next/static/chunks/69-*.js 2>/dev/null || echo "No 69 chunk!"
+
+          echo ""
+          echo "=== Test local chunk access ==="
+          curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3006/_next/static/chunks/webpack-9117f37eb59612ae.js
+          echo " webpack chunk"
+          curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3006/_next/static/chunks/app/returning-customers/page-cd1cd3e8a0da74b0.js
+          echo " returning-customers chunk"
+
+          echo ""
+          echo "=== File permissions ==="
+          ls -la ~/apps/mep-web-staging/mep-web/.next/static/chunks/ | head -10
+          echo "---"
+          ls -la ~/apps/mep-web-staging/mep-web/.next/static/chunks/app/returning-customers/ 2>/dev/null || echo "No returning-customers dir"
