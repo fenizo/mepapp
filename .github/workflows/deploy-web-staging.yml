@@ -63,4 +63,5 @@ jobs:
           cd ~/apps/mep-web-staging/mep-web
           $NPM_BIN install --production
           $PM2_BIN delete mep-web-staging || true
+          export NEXT_PUBLIC_API_URL=http://127.0.0.1:8086
           $PM2_BIN start $NPM_BIN --name "mep-web-staging" -- start -- -p 3006
