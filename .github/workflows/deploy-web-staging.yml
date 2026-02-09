@@ -19,6 +19,16 @@ jobs:
         NEXT_PUBLIC_API_URL=http://127.0.0.1:8086 npm run build
       env:
         NEXT_PUBLIC_API_URL: http://127.0.0.1:8086
+    - name: Clean old build on server
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.WEB_SERVER_USER }}
+        password: ${{ secrets.WEB_SERVER_PASSWORD }}
+        script: |
+          echo "Cleaning old .next build directory..."
+          rm -rf ~/apps/mep-web-staging/mep-web/.next
+          echo "Done"
     - name: Deploy to Server
       uses: appleboy/scp-action@master
       with:
@@ -65,3 +75,12 @@ jobs:
           $PM2_BIN delete mep-web-staging || true
           export NEXT_PUBLIC_API_URL=http://127.0.0.1:8086
           $PM2_BIN start $NPM_BIN --name "mep-web-staging" -- start -- -p 3006
+
+          # Verify deployment
+          echo ""
+          echo "=== Verifying static chunks ==="
+          ls -la ~/apps/mep-web-staging/mep-web/.next/static/chunks/app/returning-customers/ 2>/dev/null || echo "WARNING: returning-customers chunks missing!"
+          ls -la ~/apps/mep-web-staging/mep-web/.next/static/chunks/app/call-logs/ 2>/dev/null || echo "WARNING: call-logs chunks missing!"
+          echo ""
+          echo "=== Total chunk files ==="
+          find ~/apps/mep-web-staging/mep-web/.next/static/chunks/app/ -name "*.js" 2>/dev/null | wc -l
