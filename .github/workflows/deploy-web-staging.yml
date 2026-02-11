@@ -83,18 +83,24 @@ jobs:
           # Install dependencies (don't fail if some platform binaries can't install)
           $NPM_BIN install --production 2>/dev/null || echo "npm install had warnings (continuing)"
 
-          # Stop ALL PM2 processes that might use port 3006
-          $PM2_BIN delete mep-web-staging 2>/dev/null || true
-          $PM2_BIN delete mep-web 2>/dev/null || true
-          sleep 1
+          # Show what's currently on port 3006
+          echo "=== Before cleanup: port 3006 ==="
+          ss -tlnp | grep 3006 || echo "Nothing on 3006"
 
-          # Kill any remaining process on port 3006
-          fuser -k 3006/tcp 2>/dev/null || true
+          # Kill PM2 daemon entirely to prevent auto-restore of ghost processes
+          $PM2_BIN kill 2>/dev/null || true
           sleep 2
 
-          # Clear PM2 saved process list
-          $PM2_BIN save --force 2>/dev/null || true
+          # Kill any remaining process on port 3006 (multiple methods)
+          fuser -k 3006/tcp 2>/dev/null || true
+          lsof -ti:3006 | xargs kill -9 2>/dev/null || true
+          sleep 2
 
+          # Verify port 3006 is free
+          echo "=== After cleanup: port 3006 ==="
+          ss -tlnp | grep 3006 && echo "WARNING: Port 3006 still in use!" || echo "Port 3006 is free"
+
+          # Start PM2 fresh with only staging process
           export NEXT_PUBLIC_API_URL=http://127.0.0.1:8086
           $PM2_BIN start $NPM_BIN --name "mep-web-staging" --update-env -- start -- -p 3006
 
