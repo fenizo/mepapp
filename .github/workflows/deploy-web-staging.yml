@@ -26,8 +26,11 @@ jobs:
         username: ${{ secrets.WEB_SERVER_USER }}
         password: ${{ secrets.WEB_SERVER_PASSWORD }}
         script: |
-          echo "Cleaning old .next build directory..."
+          echo "Cleaning old .next build and node_modules..."
+          chmod -R u+rwX ~/apps/mep-web-staging/mep-web/.next 2>/dev/null || true
           rm -rf ~/apps/mep-web-staging/mep-web/.next
+          chmod -R u+rwX ~/apps/mep-web-staging/mep-web/node_modules 2>/dev/null || true
+          rm -rf ~/apps/mep-web-staging/mep-web/node_modules
           echo "Done"
     - name: Deploy to Server
       uses: appleboy/scp-action@master
@@ -43,6 +46,7 @@ jobs:
         host: ${{ secrets.SERVER_IP }}
         username: ${{ secrets.WEB_SERVER_USER }}
         password: ${{ secrets.WEB_SERVER_PASSWORD }}
+        command_timeout: 5m
         script: |
           # Try to load environment
           for f in /etc/profile ~/.profile ~/.bash_profile ~/.bashrc; do
@@ -67,6 +71,7 @@ jobs:
             PM2_BIN="pm2"
           fi
 
+          echo "Node: $(node -v)"
           echo "Using NPM: $NPM_BIN"
           echo "Using PM2: $PM2_BIN"
 
@@ -115,3 +120,8 @@ jobs:
             status=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:3006$chunk")
             echo "$status $chunk"
           done
+
+          # Show PM2 error logs if any issues
+          echo ""
+          echo "=== PM2 error logs (last 15 lines) ==="
+          cat ~/.pm2/logs/mep-web-staging-error.log 2>/dev/null | tail -15 || echo "No error logs"
