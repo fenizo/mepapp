@@ -244,12 +244,16 @@ class MainActivity : ComponentActivity() {
                         // Schedule AlarmManager as additional backup
                         scheduleServiceRestartAlarm()
 
-                        Log.d("MainActivity", "Call log sync started: Service + WorkManager + AlarmManager")
+                        // Schedule heartbeat for device status monitoring
+                        scheduleHeartbeat()
+
+                        Log.d("MainActivity", "Call log sync started: Service + WorkManager + AlarmManager + Heartbeat")
                     } else {
                         // Cancel all sync mechanisms if user logs out
                         stopCallLogService()
                         cancelPeriodicSync()
                         cancelServiceRestartAlarm()
+                        cancelHeartbeat()
                         Log.d("MainActivity", "Call log sync stopped - user logged out")
                     }
                 }
@@ -344,6 +348,33 @@ class MainActivity : ComponentActivity() {
         androidx.work.WorkManager.getInstance(applicationContext)
             .cancelUniqueWork("CallLogSync")
     }
+
+    private fun scheduleHeartbeat() {
+        val constraints = androidx.work.Constraints.Builder()
+            .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+            .build()
+
+        val workRequest = androidx.work.PeriodicWorkRequestBuilder<com.mepapp.mobile.worker.HeartbeatWorker>(
+            15, // Minimum interval for periodic work
+            java.util.concurrent.TimeUnit.MINUTES
+        )
+            .setConstraints(constraints)
+            .build()
+
+        androidx.work.WorkManager.getInstance(applicationContext)
+            .enqueueUniquePeriodicWork(
+                com.mepapp.mobile.worker.HeartbeatWorker.WORK_NAME,
+                androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+                workRequest
+            )
+        Log.d("MainActivity", "HeartbeatWorker scheduled")
+    }
+
+    private fun cancelHeartbeat() {
+        androidx.work.WorkManager.getInstance(applicationContext)
+            .cancelUniqueWork(com.mepapp.mobile.worker.HeartbeatWorker.WORK_NAME)
+        Log.d("MainActivity", "HeartbeatWorker cancelled")
+    }
     
     override fun onResume() {
         super.onResume()
@@ -357,6 +388,7 @@ class MainActivity : ComponentActivity() {
                     startCallLogService()
                     schedulePeriodicSync()
                     scheduleServiceRestartAlarm()
+                    scheduleHeartbeat()
                     Log.d("MainActivity", "All sync mechanisms verified on resume")
                 }
             } catch (e: Exception) {

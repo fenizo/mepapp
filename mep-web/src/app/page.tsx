@@ -29,6 +29,19 @@ export default function Dashboard() {
 
     const [callLogs, setCallLogs] = useState<any[]>([]);
 
+    const [deviceStatuses, setDeviceStatuses] = useState<any[]>([]);
+
+    const fetchDeviceStatuses = () => {
+        apiFetch('/api/device/status')
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) {
+                    setDeviceStatuses(data);
+                }
+            })
+            .catch(() => { });
+    };
+
     useEffect(() => {
         apiFetch('/api/jobs')
             .then(res => res.json())
@@ -51,6 +64,12 @@ export default function Dashboard() {
                 }
             })
             .catch(() => { });
+
+        fetchDeviceStatuses();
+
+        // Auto-refresh device status every 30 seconds
+        const interval = setInterval(fetchDeviceStatuses, 30000);
+        return () => clearInterval(interval);
     }, []);
 
     const totalCalls = jobs.length;
@@ -85,6 +104,82 @@ export default function Dashboard() {
                     <div style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '8px' }}>Synced Logs</div>
                     <div style={{ fontSize: '1.875rem', fontWeight: 700, color: '#38bdf8' }}>{callLogs.length}</div>
                 </div>
+            </div>
+
+            {/* Device Status Section */}
+            <div className="glass-card" style={{ padding: '24px', marginBottom: '32px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: 600 }}>📱 Device Status</h3>
+                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Auto-refreshes every 30s</span>
+                </div>
+                {deviceStatuses.length === 0 ? (
+                    <div style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
+                        <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📡</div>
+                        <p>No devices connected yet.</p>
+                        <p style={{ fontSize: '0.8rem', marginTop: '4px' }}>Devices will appear here once the mobile app sends its first heartbeat.</p>
+                    </div>
+                ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                        {deviceStatuses.map((device: any) => (
+                            <div key={device.userId} style={{
+                                padding: '20px',
+                                borderRadius: '12px',
+                                border: `1px solid ${device.online ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                                background: device.online ? 'rgba(34, 197, 94, 0.05)' : 'rgba(239, 68, 68, 0.05)',
+                                transition: 'all 0.3s ease'
+                            }}>
+                                {/* Header: Name + Status */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <span className={device.online ? 'status-dot online' : 'status-dot offline'}></span>
+                                        <span style={{ fontWeight: 600, fontSize: '1rem' }}>{device.userName}</span>
+                                    </div>
+                                    <span style={{
+                                        padding: '3px 10px',
+                                        borderRadius: '20px',
+                                        fontSize: '0.7rem',
+                                        fontWeight: 600,
+                                        background: device.online ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                        color: device.online ? '#22c55e' : '#ef4444'
+                                    }}>
+                                        {device.online ? 'ONLINE' : 'OFFLINE'}
+                                    </span>
+                                </div>
+
+                                {/* Details Grid */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.8rem' }}>
+                                    <div>
+                                        <div style={{ color: '#64748b', marginBottom: '2px' }}>Internet</div>
+                                        <div style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            {device.online ? '🟢' : '🔴'} {device.online ? 'Connected' : 'Disconnected'}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div style={{ color: '#64748b', marginBottom: '2px' }}>API Status</div>
+                                        <div style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            {device.online ? '🟢' : '🔴'} {device.online ? 'Connected' : 'Disconnected'}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div style={{ color: '#64748b', marginBottom: '2px' }}>Network</div>
+                                        <div style={{ fontWeight: 500, textTransform: 'uppercase' as const }}>
+                                            {device.networkType === 'wifi' ? '📶 WiFi' : device.networkType === 'mobile' ? '📱 Mobile' : device.networkType}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div style={{ color: '#64748b', marginBottom: '2px' }}>Last Seen</div>
+                                        <div style={{ fontWeight: 500 }}>🕐 {device.lastSeenAgo}</div>
+                                    </div>
+                                </div>
+
+                                {/* App Version */}
+                                <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--card-border)', fontSize: '0.75rem', color: '#64748b' }}>
+                                    App Version: <span style={{ fontWeight: 500, color: 'var(--foreground)' }}>v{device.appVersion}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             <div className="glass-card" style={{ padding: '24px' }}>
@@ -133,3 +228,4 @@ export default function Dashboard() {
         </div>
     );
 }
+

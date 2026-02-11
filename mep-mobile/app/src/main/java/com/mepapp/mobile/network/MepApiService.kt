@@ -27,6 +27,9 @@ interface MepApiService {
 
     @GET("api/settings/sync-interval")
     suspend fun getSyncInterval(): SyncIntervalResponse
+
+    @POST("api/device/heartbeat")
+    suspend fun sendHeartbeat(@Body request: HeartbeatRequest): Map<String, String>
 }
 
 data class SyncIntervalResponse(val value: String)
@@ -61,3 +64,10 @@ data class CallLogRequest(
 data class CallLogResponse(val id: String)
 
 data class InvoiceResponse(val id: String, val invoiceNumber: String, val finalAmount: Double)
+
+data class HeartbeatRequest(
+    val userId: String,
+    val userName: String,
+    val networkType: String = "unknown",
+    val appVersion: String = "unknown"
+)
