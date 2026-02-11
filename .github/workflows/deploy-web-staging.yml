@@ -71,33 +71,48 @@ jobs:
           echo "Using PM2: $PM2_BIN"
 
           cd ~/apps/mep-web-staging/mep-web
+
+          # Fix permissions on deployed files
+          chmod -R u+rwX ~/apps/mep-web-staging/mep-web/.next/ 2>/dev/null || true
+
+          # Clean and reinstall node_modules
+          rm -rf node_modules
           $NPM_BIN install --production
 
-          # Stop existing process and kill any stale node processes on port 3006
+          # Stop ONLY staging process (don't kill production mep-web)
           $PM2_BIN delete mep-web-staging 2>/dev/null || true
-          $PM2_BIN kill 2>/dev/null || true
-          sleep 2
+          sleep 1
 
-          # Kill any remaining process on port 3006
+          # Kill any process on port 3006 (staging port)
           PID=$(lsof -ti:3006 2>/dev/null || true)
           if [ -n "$PID" ]; then
-            echo "Killing stale process on port 3006: $PID"
+            echo "Killing process on port 3006: $PID"
             kill -9 $PID 2>/dev/null || true
-            sleep 1
+            sleep 2
           fi
 
-          export NEXT_PUBLIC_API_URL=http://127.0.0.1:8086
-          $PM2_BIN start $NPM_BIN --name "mep-web-staging" --update-env -- start -- -p 3006
-          sleep 3
+          # Clear PM2 saved process list to prevent auto-restart of production on this port
+          $PM2_BIN unstartup 2>/dev/null || true
 
-          # Verify the new server is serving correct build
+          export NEXT_PUBLIC_API_URL=http://127.0.0.1:8086
+          PORT=3006 $PM2_BIN start $NPM_BIN --name "mep-web-staging" --update-env -- start -- -p 3006
+          sleep 5
+
+          # Verify
           echo ""
-          echo "=== BUILD_ID on disk ==="
-          cat ~/apps/mep-web-staging/mep-web/.next/BUILD_ID
+          echo "=== PM2 process list ==="
+          $PM2_BIN list
+
           echo ""
           echo "=== Testing local access ==="
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3006/ 2>/dev/null || echo "FAIL")
           echo "Homepage: $HTTP_CODE"
+
+          # Test chunk loading
+          CHUNKS=$(curl -s http://127.0.0.1:3006/returning-customers 2>/dev/null | grep -o 'src="/_next/static[^"]*"' | sed 's/src="//;s/"//')
           echo ""
-          echo "=== PM2 process list ==="
-          $PM2_BIN list
+          echo "=== Chunk test ==="
+          for chunk in $CHUNKS; do
+            status=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:3006$chunk")
+            echo "$status $chunk"
+          done
