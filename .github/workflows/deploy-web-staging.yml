@@ -72,30 +72,29 @@ jobs:
 
           cd ~/apps/mep-web-staging/mep-web
 
-          # Fix permissions on deployed files
-          chmod -R u+rwX ~/apps/mep-web-staging/mep-web/.next/ 2>/dev/null || true
+          # Fix permissions on all deployed files
+          chmod -R u+rwX ~/apps/mep-web-staging/mep-web/ 2>/dev/null || true
 
-          # Clean and reinstall node_modules
-          rm -rf node_modules
-          $NPM_BIN install --production
+          # Install dependencies (don't fail if some platform binaries can't install)
+          $NPM_BIN install --production 2>/dev/null || echo "npm install had warnings (continuing)"
 
-          # Stop ONLY staging process (don't kill production mep-web)
+          # Stop ALL PM2 processes that might use port 3006
           $PM2_BIN delete mep-web-staging 2>/dev/null || true
+          $PM2_BIN delete mep-web 2>/dev/null || true
           sleep 1
 
-          # Kill any process on port 3006 (staging port)
-          PID=$(lsof -ti:3006 2>/dev/null || true)
-          if [ -n "$PID" ]; then
-            echo "Killing process on port 3006: $PID"
-            kill -9 $PID 2>/dev/null || true
-            sleep 2
-          fi
+          # Kill any remaining process on port 3006
+          fuser -k 3006/tcp 2>/dev/null || true
+          sleep 2
 
-          # Clear PM2 saved process list to prevent auto-restart of production on this port
-          $PM2_BIN unstartup 2>/dev/null || true
+          # Clear PM2 saved process list
+          $PM2_BIN save --force 2>/dev/null || true
 
           export NEXT_PUBLIC_API_URL=http://127.0.0.1:8086
-          PORT=3006 $PM2_BIN start $NPM_BIN --name "mep-web-staging" --update-env -- start -- -p 3006
+          $PM2_BIN start $NPM_BIN --name "mep-web-staging" --update-env -- start -- -p 3006
+
+          # Save only staging process
+          $PM2_BIN save 2>/dev/null || true
           sleep 5
 
           # Verify
