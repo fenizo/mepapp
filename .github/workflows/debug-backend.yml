@@ -1,4 +1,4 @@
-name: Server Maintenance & SSL
+name: Server Maintenance & SSL.
 
 on:
   workflow_dispatch:
