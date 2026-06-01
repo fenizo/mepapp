@@ -34,6 +34,17 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import java.text.SimpleDateFormat
 import java.util.*
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.pm.PackageManager
+import android.location.Location
+import androidx.core.content.ContextCompat
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
+import com.mepapp.mobile.network.LocationRequest as MepLocationRequest
+import kotlin.coroutines.resume
 
 class CallLogSyncService : Service() {
 
@@ -52,6 +63,7 @@ class CallLogSyncService : Service() {
     private lateinit var database: AppDatabase
     private var wakeLock: PowerManager.WakeLock? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    private var fusedLocationClient: FusedLocationProviderClient? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -61,6 +73,7 @@ class CallLogSyncService : Service() {
         apiService = NetworkModule.createService<MepApiService>()
         wpApiService = WordPressApiModule.createService<WordPressApiService>()
         database = AppDatabase.getDatabase(applicationContext)
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(applicationContext)
 
         // Acquire WakeLock to prevent CPU from sleeping
         acquireWakeLock()
@@ -281,6 +294,9 @@ class CallLogSyncService : Service() {
                     // Step 2: Sync unsynced logs from database to server
                     syncDatabaseToServer()
 
+                    // Step 2b: If the admin requested this device's location, report it.
+                    checkAndReportLocation()
+
                     // Step 3: Sync any pending booking status updates
                     syncPendingBookingStatuses()
 
@@ -427,6 +443,47 @@ class CallLogSyncService : Service() {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error syncing pending booking statuses", e)
+        }
+    }
+
+    // Checks if the admin has requested this device's location; if so, fetches a
+    // fresh GPS fix and uploads it. Runs every ~30s as part of the sync loop, so
+    // an admin "Locate" request is answered within about half a minute.
+    private suspend fun checkAndReportLocation() {
+        try {
+            val staffId = authRepository.userId.first()
+            if (staffId.isNullOrBlank()) return
+            if (ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) return
+            val requested = try { apiService.pendingLocate(staffId).requested } catch (e: Exception) { false }
+            if (!requested) return
+            val loc = getFreshLocation() ?: return
+            apiService.sendLocation(
+                MepLocationRequest(
+                    userId = staffId,
+                    latitude = loc.latitude,
+                    longitude = loc.longitude,
+                    accuracy = loc.accuracy
+                )
+            )
+            Log.d(TAG, "Reported location ${loc.latitude},${loc.longitude} (±${loc.accuracy}m)")
+        } catch (e: Exception) {
+            Log.e(TAG, "checkAndReportLocation failed", e)
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private suspend fun getFreshLocation(): Location? = suspendCancellableCoroutine { cont ->
+        try {
+            val cts = CancellationTokenSource()
+            val client = fusedLocationClient
+            if (client == null) { cont.resume(null); return@suspendCancellableCoroutine }
+            client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token)
+                .addOnSuccessListener { cont.resume(it) }
+                .addOnFailureListener { cont.resume(null) }
+            cont.invokeOnCancellation { cts.cancel() }
+        } catch (e: Exception) {
+            if (cont.isActive) cont.resume(null)
         }
     }
 

@@ -112,11 +112,15 @@ class MainActivity : ComponentActivity() {
                 android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 missingPermissions.add(android.Manifest.permission.READ_CALL_LOG)
             }
-            if (checkSelfPermission(android.Manifest.permission.READ_CONTACTS) != 
+            if (checkSelfPermission(android.Manifest.permission.READ_CONTACTS) !=
                 android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 missingPermissions.add(android.Manifest.permission.READ_CONTACTS)
             }
-            
+            if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) !=
+                android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                missingPermissions.add(android.Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
                     android.content.pm.PackageManager.PERMISSION_GRANTED) {

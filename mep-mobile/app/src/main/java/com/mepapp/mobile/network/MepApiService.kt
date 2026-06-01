@@ -30,7 +30,23 @@ interface MepApiService {
 
     @POST("api/device/heartbeat")
     suspend fun sendHeartbeat(@Body request: HeartbeatRequest): Map<String, String>
+
+    @GET("api/device/pending-locate/{userId}")
+    suspend fun pendingLocate(@Path("userId") userId: String): PendingLocateResponse
+
+    @POST("api/device/location")
+    suspend fun sendLocation(@Body request: LocationRequest): Map<String, String>
 }
+
+data class PendingLocateResponse(val requested: Boolean = false)
+
+data class LocationRequest(
+    val userId: String,
+    val userName: String? = null,
+    val latitude: Double,
+    val longitude: Double,
+    val accuracy: Float? = null
+)
 
 data class SyncIntervalResponse(val value: String)
 
