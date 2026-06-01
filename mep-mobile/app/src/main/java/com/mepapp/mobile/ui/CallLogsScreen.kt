@@ -133,6 +133,33 @@ fun CallLogsScreen(onBack: () -> Unit) {
                 }
             }
 
+            // Re-sync ALL: marks every log unsynced so the background service
+            // re-uploads the entire history to the server (deduped server-side).
+            Button(
+                onClick = {
+                    scope.launch {
+                        try {
+                            database.callLogDao().markAllUnsynced()
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                        loadCallLogs()
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8))
+            ) {
+                Text("Re-sync ALL logs to server")
+            }
+            Text(
+                text = "Marks all logs as pending; they re-upload automatically within ~30 seconds (keep internet on).",
+                fontSize = 12.sp,
+                color = Color.Gray,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+            )
+
             if (isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),

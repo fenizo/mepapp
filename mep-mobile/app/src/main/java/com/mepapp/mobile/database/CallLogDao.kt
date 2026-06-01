@@ -18,7 +18,11 @@ interface CallLogDao {
     
     @Query("UPDATE call_logs SET isSynced = 1 WHERE id IN (:ids)")
     suspend fun markAsSynced(ids: List<Long>)
-    
+
+    // Reset every log to unsynced so the background sync re-uploads the full history.
+    @Query("UPDATE call_logs SET isSynced = 0")
+    suspend fun markAllUnsynced(): Int
+
     @Query("SELECT COUNT(*) FROM call_logs WHERE phoneCallId = :phoneCallId")
     suspend fun callLogExists(phoneCallId: String): Int
     
